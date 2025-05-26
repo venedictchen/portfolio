@@ -6,7 +6,7 @@
 :root {
   --color-dark-brown: #471b1c;
   --color-dark-red: #5a130f;
-  --color-red: #8B0000;
+  --color-red: #8b0000;
   --color-orange: #ab3a12;
   --color-yellow: #fda237;
   --color-brown: #c38d5f;
@@ -107,6 +107,16 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --animate-marquee-infinite: marquee 25s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .dark {

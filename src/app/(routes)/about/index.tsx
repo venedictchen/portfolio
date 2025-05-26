@@ -260,7 +260,7 @@ export default function AboutSection() {
               <div className="relative w-full h-full rounded-full overflow-hidden p-2 sm:p-3 bg-gradient-to-br from-[#F9A826]/40 to-transparent">
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#3A0F09]/30 to-transparent rounded-full z-10" />
                 <Image
-                  src="/images/profile.jpg"
+                  src="/images/profile.png"
                   alt="Software Engineer"
                   fill
                   className="object-cover rounded-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-3"
