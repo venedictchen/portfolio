@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, Variants } from "framer-motion";
 
 export default function AboutSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -30,61 +30,61 @@ export default function AboutSection() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const titleVariants = {
+  const titleVariants: Variants = {
     hidden: { opacity: 0, y: -20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.6,
-        ease: "easeOut",
+        ease: [0.25, 0.1, 0.25, 1],
       },
     },
   };
 
-  const imageVariants = {
+  const imageVariants: Variants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: {
       opacity: 1,
       scale: 1,
       transition: {
         duration: 0.8,
-        ease: "easeOut",
+        ease: [0.25, 0.1, 0.25, 1],
       },
     },
   };
 
-  const contentVariants = {
+  const contentVariants: Variants = {
     hidden: { opacity: 0, x: 30 },
     visible: {
       opacity: 1,
       x: 0,
       transition: {
         duration: 0.8,
-        ease: "easeOut",
+        ease: [0.25, 0.1, 0.25, 1],
         staggerChildren: 0.2,
         delayChildren: 0.2,
       },
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: "easeOut" },
+      transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] },
     },
   };
 
-  const buttonVariants = {
+  const buttonVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.5,
-        ease: "easeOut",
+        ease: [0.25, 0.1, 0.25, 1],
       },
     },
     hover: {
@@ -93,7 +93,7 @@ export default function AboutSection() {
     },
   };
 
-  const decorVariants = {
+  const decorVariants: Variants = {
     animate: {
       x: [0, 30, -20, 10, 0],
       y: [0, -20, 30, -10, 0],
@@ -101,42 +101,42 @@ export default function AboutSection() {
       opacity: [0.2, 0.4, 0.3, 0.35, 0.2],
       transition: {
         duration: 20,
-        repeat: Number.POSITIVE_INFINITY,
+        repeat: Infinity,
         repeatType: "reverse" as const,
-        ease: "easeInOut",
+        ease: [0.42, 0, 0.58, 1],
       },
     },
   };
 
-  const accent1Variants = {
+  const accent1Variants: Variants = {
     animate: {
       rotate: 360,
       transition: {
         duration: 25,
-        repeat: Number.POSITIVE_INFINITY,
+        repeat: Infinity,
         ease: "linear",
       },
     },
   };
 
-  const accent2Variants = {
+  const accent2Variants: Variants = {
     animate: {
       rotate: -360,
       transition: {
         duration: 30,
-        repeat: Number.POSITIVE_INFINITY,
+        repeat: Infinity,
         ease: "linear",
       },
     },
   };
 
-  const accent3Variants = {
+  const accent3Variants: Variants = {
     animate: {
       rotate: [0, 180, 0],
       transition: {
         duration: 20,
-        repeat: Number.POSITIVE_INFINITY,
-        ease: "easeInOut",
+        repeat: Infinity,
+        ease: [0.42, 0, 0.58, 1],
       },
     },
   };
@@ -158,9 +158,9 @@ export default function AboutSection() {
           }}
           transition={{
             duration: 15,
-            repeat: Number.POSITIVE_INFINITY,
+            repeat: Infinity,
             repeatType: "reverse",
-            ease: "easeInOut",
+            ease: [0.42, 0, 0.58, 1],
           }}
         />
         <motion.div
@@ -171,9 +171,9 @@ export default function AboutSection() {
           }}
           transition={{
             duration: 18,
-            repeat: Number.POSITIVE_INFINITY,
+            repeat: Infinity,
             repeatType: "reverse",
-            ease: "easeInOut",
+            ease: [0.42, 0, 0.58, 1],
           }}
         />
       </div>
@@ -183,32 +183,37 @@ export default function AboutSection() {
           className="absolute top-10 left-10 w-40 sm:w-60 h-40 sm:h-60 rounded-full bg-gradient-radial from-[#F9A826] to-transparent blur-3xl"
           variants={decorVariants}
           animate="animate"
-          custom={0}
         />
         <motion.div
           className="absolute bottom-20 right-20 w-60 sm:w-80 h-60 sm:h-80 rounded-full bg-gradient-radial from-[#F9A826] to-transparent blur-3xl"
-          variants={decorVariants}
-          animate="animate"
-          custom={1}
+          animate={{
+            x: [0, 30, -20, 10, 0],
+            y: [0, -20, 30, -10, 0],
+            scale: [1, 1.1, 0.9, 1.05, 1],
+            opacity: [0.2, 0.4, 0.3, 0.35, 0.2],
+          }}
           transition={{
             delay: 0.5,
             duration: 25,
-            repeat: Number.POSITIVE_INFINITY,
+            repeat: Infinity,
             repeatType: "reverse",
-            ease: "easeInOut",
+            ease: [0.42, 0, 0.58, 1],
           }}
         />
         <motion.div
           className="absolute top-1/3 right-1/4 w-32 sm:w-40 h-32 sm:h-40 rounded-full bg-gradient-radial from-[#F9A826] to-transparent blur-2xl"
-          variants={decorVariants}
-          animate="animate"
-          custom={2}
+          animate={{
+            x: [0, 30, -20, 10, 0],
+            y: [0, -20, 30, -10, 0],
+            scale: [1, 1.1, 0.9, 1.05, 1],
+            opacity: [0.2, 0.4, 0.3, 0.35, 0.2],
+          }}
           transition={{
             delay: 1,
             duration: 22,
-            repeat: Number.POSITIVE_INFINITY,
+            repeat: Infinity,
             repeatType: "reverse",
-            ease: "easeInOut",
+            ease: [0.42, 0, 0.58, 1],
           }}
         />
       </div>
@@ -260,7 +265,7 @@ export default function AboutSection() {
               <div className="relative w-full h-full rounded-full overflow-hidden p-2 sm:p-3 bg-gradient-to-br from-[#F9A826]/40 to-transparent">
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#3A0F09]/30 to-transparent rounded-full z-10" />
                 <Image
-                  src="/images/profile.png"
+                  src="/images/profile.jpg"
                   alt="Software Engineer"
                   fill
                   className="object-cover rounded-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-3"
