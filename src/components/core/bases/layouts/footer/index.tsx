@@ -1,4 +1,7 @@
+"use client";
+
 import { motion } from "framer-motion";
+
 export const Footer = () => {
   return (
     <footer className="py-8 px-4 bg-dark-brown text-center text-white/60">
