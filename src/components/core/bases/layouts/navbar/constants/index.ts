@@ -12,8 +12,8 @@ export const LINKS = {
         href: "#techstack",
     },
     PROJECTS: {
-        name: "Projects",
-        href: "#projects",
+        name: "Projects & Articles",
+        href: "#showcase",
     },
     CONTACT: {
         name: "Contact",
