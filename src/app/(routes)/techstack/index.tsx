@@ -16,6 +16,7 @@ export default function TechStackSection() {
                 alt={tech.alt}
                 width={100}
                 height={100}
+                className="object-contain md:w-24 md:h-24 w-32 h-32 transition-transform duration-300 ease-in-out hover:scale-120"
               />
             </div>
           </div>
