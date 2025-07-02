@@ -1,37 +1,78 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { LINKS } from "../constants";
 import { useNavbarStyles } from "@/components";
 import { Menu, X } from "lucide-react";
-import gsap from "gsap";
 
 export const MobileNavbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { isScrolledPastScreenHeight, bgClass, roundedClass, positionClass } =
     useNavbarStyles();
-  const linksRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setIsOpen(!isOpen);
   };
 
-  useEffect(() => {
-    if (isOpen && linksRef.current) {
-      gsap.fromTo(
-        linksRef.current.children,
-        { x: 100, opacity: 0 },
-        {
-          x: 0,
-          opacity: 1,
-          stagger: 0.1,
-          duration: 0.6,
-          ease: "power3.out",
-        }
-      );
-    }
-  }, [isOpen]);
+  const overlayVariants = {
+    hidden: {
+      opacity: 0,
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: "easeInOut" as const,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeInOut" as const,
+      },
+    },
+  };
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const linkVariants = {
+    hidden: {
+      x: 100,
+      opacity: 0,
+    },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut" as const,
+      },
+    },
+  };
+
+  const iconVariants = {
+    menu: {
+      opacity: 1,
+      rotate: 0,
+      transition: { duration: 0.3 },
+    },
+    close: {
+      opacity: 0,
+      rotate: 90,
+      transition: { duration: 0.3 },
+    },
+  };
 
   return (
     <>
@@ -52,40 +93,56 @@ export const MobileNavbar = () => {
               aria-label="Toggle menu"
             >
               <div className="relative w-8 h-8">
-                <Menu
-                  className={`w-8 h-8 absolute transition-all duration-300 ${
-                    isOpen ? "opacity-0 rotate-90" : "opacity-100 rotate-0"
-                  }`}
-                />
-                <X
-                  className={`w-8 h-8 absolute transition-all duration-300 ${
-                    isOpen ? "opacity-100 rotate-0" : "opacity-0 rotate-90"
-                  }`}
-                />
+                <motion.div
+                  className="absolute"
+                  variants={iconVariants}
+                  animate={isOpen ? "close" : "menu"}
+                >
+                  <Menu className="w-8 h-8" />
+                </motion.div>
+                <motion.div
+                  className="absolute"
+                  variants={iconVariants}
+                  animate={isOpen ? "menu" : "close"}
+                >
+                  <X className="w-8 h-8" />
+                </motion.div>
               </div>
             </button>
           </div>
         </div>
       </nav>
 
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-95 z-40 flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${
-          isOpen ? "opacity-100 visible" : "opacity-0 invisible"
-        }`}
-      >
-        <div ref={linksRef} className="flex flex-col items-center space-y-8">
-          {Object.values(LINKS).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setIsOpen(false)}
-              className="text-white text-2xl hover:text-[#F9A826] opacity-0"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-dark-red bg-opacity-95 z-40 flex flex-col items-center justify-center"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <motion.div
+              className="flex flex-col items-center space-y-8"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
             >
-              {link.name}
-            </Link>
-          ))}
-        </div>
-      </div>
+              {Object.values(LINKS).map((link) => (
+                <motion.div key={link.href} variants={linkVariants}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className="text-white text-2xl hover:text-[#F9A826]"
+                  >
+                    {link.name}
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
