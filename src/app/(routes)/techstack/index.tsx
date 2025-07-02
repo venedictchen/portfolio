@@ -3,7 +3,7 @@ import { TECHSTACK } from "./constant";
 
 export default function TechStackSection() {
   return (
-    <div className="overflow-hidden bg-orange-200">
+    <div id="techstack" className="overflow-hidden bg-orange-200">
       <div className="marquee-track flex w-max h-full py-6 select-none animate-marquee-infinite whitespace-nowrap">
         {[...TECHSTACK, ...TECHSTACK].map((tech, index) => (
           <div

@@ -7,7 +7,7 @@ import BackgroundElements from "./elements/background-element";
 import ShowcaseCard from "./elements/showcase-card";
 
 
-export default function ProjectsSection() {
+export default function ShowcaseSection() {
   const titleRef = useRef<HTMLDivElement>(null);
   const titleInView = useInView(titleRef, { once: false, amount: 0.5 });
 
@@ -35,7 +35,7 @@ export default function ProjectsSection() {
   };
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#3A0F09] via-[#4A1B12] to-[#5C2318] relative overflow-hidden">
+    <section id="showcase" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#3A0F09] via-[#4A1B12] to-[#5C2318] relative overflow-hidden">
       <BackgroundElements />
 
       <div className="max-w-7xl mx-auto relative z-10">

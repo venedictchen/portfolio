@@ -144,6 +144,7 @@ export default function AboutSection() {
   return (
     <motion.section
       ref={sectionRef}
+      id="about"
       className="about-section py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 lg:px-16 bg-gradient-to-br from-[#3A0F09] via-[#4A1B12] to-[#5C2318] relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
