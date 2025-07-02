@@ -1,11 +1,10 @@
 "use client";
 import AboutSection from "./about";
 import HeroSection from "./hero";
-import { useRef } from "react";
 import TechStackSection from "./techstack";
 import ExperienceSection from "./experience";
-import ProjectsSection from "./projects";
 import ContactSection from "./contact";
+import ShowcaseSection from "./showcase";
 
 export default function Home() {
 
@@ -15,7 +14,7 @@ export default function Home() {
       <AboutSection />
       <TechStackSection />
       <ExperienceSection />
-      <ProjectsSection />
+      <ShowcaseSection />
       <ContactSection />
     </main>
   );
