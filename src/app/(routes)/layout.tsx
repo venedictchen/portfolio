@@ -6,9 +6,11 @@ const LoadingComponent = () => {
   return (
     <div
       className={
-        "w-full h-screen bg-black flex justify-center items-center z-[110] transition-all duration-1000 ease-in-out"
+        "w-full h-screen bg-primary flex justify-center items-center z-[110] transition-all duration-1000 ease-in-out"
       }
-    ></div>
+    >
+      <div className="loader"></div>
+    </div>
   );
 };
 

@@ -21,7 +21,7 @@ export const IsLoadedProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoaded(true);
-    }, 0);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [pathname]);
