@@ -31,7 +31,7 @@ export default function ContactSection() {
     <motion.section
       ref={sectionRef}
       id="contact"
-      className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 lg:px-16 bg-dark-red relative overflow-hidden"
+      className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 lg:px-16 bg-primary relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}

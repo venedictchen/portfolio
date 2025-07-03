@@ -23,7 +23,7 @@ export default function HeroSection() {
             Hello, I'm{" "}
             <span className="text-orange-200 relative inline-block">
               Venedict{" "}
-              <span className="absolute -top-7 -right-7 text-2xl text-orange-400">
+              <span className="absolute -top-16  sm:right-0 sm:-top-7 -right-7 -right-7 text-2xl text-orange-400">
                 <Star className="w-7 h-7 fill-orange-400 text-orange-400 animate-spin" />
               </span>
             </span>

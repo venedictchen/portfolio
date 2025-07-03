@@ -34,10 +34,6 @@ export default function DesktopShowcaseCard({
       variants={cardVariants}
       initial="hidden"
       animate={cardInView ? "visible" : "hidden"}
-      whileHover={{
-        scale: 1.02,
-        transition: { duration: 0.3 },
-      }}
     >
       {/* Background Image */}
       <div className="absolute inset-0 overflow-hidden">

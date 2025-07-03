@@ -119,6 +119,8 @@
   }
 }
 
+html { scroll-behavior: smooth; }
+
 .loader {
    --s: 40px;
    height: calc(var(--s)*0.9);
