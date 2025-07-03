@@ -1,5 +1,3 @@
-import { type LucideIcon } from "lucide-react";
-
 export interface Experience {
   id: number;
   company: string;
@@ -8,12 +6,12 @@ export interface Experience {
   location?: string;
   responsibilities: string[];
   type: "work" | "education" | "organization";
-  icon: LucideIcon;
+  icon: string;
 }
 
 export interface TimelineNodeProps {
   type: Experience["type"];
-  icon: Experience["icon"];
+  icon: string;
   isInView: boolean;
 }
 

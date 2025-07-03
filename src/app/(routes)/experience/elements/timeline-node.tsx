@@ -4,12 +4,13 @@ import { motion } from "framer-motion";
 import { getTypeColor } from "../constant";
 import { nodeVariants } from "../animations";
 import { TimelineNodeProps } from "../types";
+import Image from "next/image";
 
 export default function TimelineNode({
   type,
-  icon: IconComponent,
+  icon,
   isInView,
-}: TimelineNodeProps) {
+}: Readonly<TimelineNodeProps>) {
   const colors = getTypeColor(type);
 
   return (
@@ -38,7 +39,12 @@ export default function TimelineNode({
             animate={{ x: isInView ? "100%" : "-100%" }}
             transition={{ duration: 1.5, delay: 0.5 }}
           />
-          <IconComponent className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-[#fda237] relative z-10" />
+          <Image
+            src={icon}
+            alt="icon"
+            fill
+            className="object-cover rounded-full z-10 bg-white"
+          />
         </div>
         <motion.div
           className="absolute -top-1 -right-1 w-4 h-4 bg-[#fda237] rounded-full"
