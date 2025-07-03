@@ -4,7 +4,7 @@ import { useRef} from "react";
 import { motion, useInView, type Variants } from "framer-motion";
 import { SHOWCASE } from "./constants";
 import BackgroundElements from "./elements/background-element";
-import ShowcaseCard from "./elements/showcase-card";
+import { ShowcaseCard } from "./elements/showcase-card";
 
 
 export default function ShowcaseSection() {
@@ -54,7 +54,7 @@ export default function ShowcaseSection() {
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: false, amount: 0.2 }}
+          viewport={{ once: false, amount: 0.05}}
         >
           {SHOWCASE.map((showcase) => (
             <ShowcaseCard key={showcase.id} showcase={showcase} />

@@ -16,7 +16,7 @@ export default function ExperienceCard({
   return (
     <motion.div className="w-full pl-24 md:pl-28 lg:pl-32 max-w-full">
       <motion.div
-        className="bg-gradient-to-br from-[#5a130f]/90 to-[#471b1c]/95  rounded-xl md:rounded-2xl p-4 md:p-6 border border-[#fda237]/20 shadow-xl shadow-black/20 relative overflow-hidden group"
+        className="bg-gradient-to-br from-[#5a130f]/90 to-[#471b1c]/95 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 border border-[#fda237]/20 shadow-xl shadow-black/20 relative overflow-hidden group"
         whileHover={{ scale: 1.02, y: -5, transition: { duration: 0.2 } }}
       >
         <motion.div

@@ -62,7 +62,7 @@ export const SHOWCASE: Showcase[] = [
             "An article explaining how Express middleware enhances both code maintainability and application security—real examples from real projects.",
         technologies: ["Express.js", "Middleware", "Security"],
         imageUrl:
-            "images/articles/middleware.png",
+            "/images/articles/middleware.png",
         demoUrl:
             "https://medium.com/@venedictchen/how-can-middleware-secure-our-code-and-company-express-js-a3819b0794d4",
         category: "Article",
