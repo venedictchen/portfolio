@@ -21,15 +21,15 @@ export default function TimelineNode({
       <motion.div
         className={`w-10 h-10 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-full bg-gradient-to-r ${colors.from} ${colors.to} p-1 relative`}
         whileHover={{ scale: 1.2, rotate: 360, transition: { duration: 0.3 } }}
-        animate={{
-          boxShadow: isInView
-            ? [
-                "0 0 0 0 rgba(253, 162, 55, 0)",
-                "0 0 0 20px rgba(253, 162, 55, 0.1)",
-                "0 0 0 0 rgba(253, 162, 55, 0)",
-              ]
-            : "0 0 0 0 rgba(253, 162, 55, 0)",
-        }}
+        // animate={{
+        //   boxShadow: isInView
+        //     ? [
+        //         "0 0 0 0 rgba(253, 162, 55, 0)",
+        //         "0 0 0 20px rgba(253, 162, 55, 0.1)",
+        //         "0 0 0 0 rgba(253, 162, 55, 0)",
+        //       ]
+        //     : "0 0 0 0 rgba(253, 162, 55, 0)",
+        // }}
         transition={{ boxShadow: { duration: 2, repeat: Infinity } }}
       >
         <div className="w-full h-full rounded-full bg-[#471b1c] flex items-center justify-center relative overflow-hidden">

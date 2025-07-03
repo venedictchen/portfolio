@@ -41,10 +41,6 @@ export default function ExperienceSection() {
         />
         <motion.div
           className="absolute bottom-20 left-20 w-40 h-40 rounded-full bg-gradient-to-r from-[#d37070] to-[#8b0000] blur-xl"
-          style={{ 
-            willChange: 'transform',
-            transform: 'translateZ(0)'
-          }}
           animate={{
             scale: [1, 1.15, 1],
             opacity: [0.1, 0.15, 0.1],
@@ -73,7 +69,6 @@ export default function ExperienceSection() {
               variants={titleVariants}
               initial="hidden"
               animate={titleInView ? "visible" : "hidden"}
-              style={{ willChange: 'transform' }}
             >
               Experience
             </motion.h2>
@@ -86,7 +81,6 @@ export default function ExperienceSection() {
             initial={{ scaleY: 0, originY: 0 }}
             animate={{ scaleY: isSectionInView ? 1 : 0 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            style={{ willChange: 'transform' }}
           />
           <div className="space-y-8 md:space-y-16">
             {EXPERIENCES.map((experience, index) => (
