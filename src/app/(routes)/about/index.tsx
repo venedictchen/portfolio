@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { motion, useInView, Variants } from "framer-motion";
+import Link from "next/link";
 
 export default function AboutSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -320,12 +321,18 @@ export default function AboutSection() {
                 whileHover="hover"
                 whileTap={{ scale: 0.95 }}
               >
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto relative overflow-hidden border-2 border-yellow bg-transparent text-yellow hover:bg-yellow hover:text-[#3A0F09] transition-all duration-300 hover:shadow-lg hover:shadow-yellow/20 font-medium text-base sm:text-lg px-4 sm:px-6 py-2"
+                <a
+                  href="https://drive.google.com/file/d/1bMwVLcIFy7z6a3cUeWuVPtpEog3UOYlA/view?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  Download CV
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto relative overflow-hidden border-2 border-yellow bg-transparent text-yellow hover:bg-yellow hover:text-[#3A0F09] transition-all duration-300 hover:shadow-lg hover:shadow-yellow/20 font-medium text-base sm:text-lg px-4 sm:px-6 py-2"
+                  >
+                    View My CV
+                  </Button>
+                </a>
               </motion.div>
 
               <motion.div
@@ -333,9 +340,11 @@ export default function AboutSection() {
                 whileHover="hover"
                 whileTap={{ scale: 0.95 }}
               >
-                <Button className="w-full sm:w-auto relative overflow-hidden bg-gradient-to-r from-yellow to-[#FFC56E] hover:from-[#FFC56E] hover:to-yellow text-[#3A0F09] transition-all duration-300 hover:shadow-lg hover:shadow-[#F9A826]/20 font-medium text-base sm:text-lg px-4 sm:px-6 py-2">
-                  Contact Me
-                </Button>
+                <Link href="#contact" scroll={true}>
+                  <Button className="w-full sm:w-auto relative overflow-hidden bg-gradient-to-r from-yellow to-[#FFC56E] hover:from-[#FFC56E] hover:to-yellow text-[#3A0F09] transition-all duration-300 hover:shadow-lg hover:shadow-[#F9A826]/20 font-medium text-base sm:text-lg px-4 sm:px-6 py-2">
+                    Contact Me
+                  </Button>
+                </Link>
               </motion.div>
             </motion.div>
           </motion.div>
