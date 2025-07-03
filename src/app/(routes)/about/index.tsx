@@ -308,10 +308,9 @@ export default function AboutSection() {
             >
               My journey in tech began with a curiosity about how things work,
               which evolved into a career building software that makes a
-              difference. I'm constantly learning and exploring new technologies
-              to stay at the cutting edge of development.
+              difference. I&apos;m constantly learning and exploring new
+              technologies to stay at the cutting edge of development.
             </motion.p>
-
             <motion.div
               className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2"
               variants={itemVariants}

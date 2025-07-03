@@ -12,12 +12,12 @@ export default function ContactInfo() {
     >
       <div className="space-y-6">
         <h3 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#fda237] to-[#fdc592]">
-          Let's Connect
+          Let&apos;s Connect
         </h3>
         <p className="text-white/80 text-lg leading-relaxed">
-          I'm always open to discussing new opportunities, interesting projects,
-          or just having a chat about technology and development. Feel free to
-          reach out!
+          I&apos;m always open to discussing new opportunities, interesting
+          projects, or just having a chat about technology and development. Feel
+          free to reach out!
         </p>
       </div>
 

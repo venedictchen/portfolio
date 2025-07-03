@@ -41,7 +41,7 @@ export default function ShowcaseSection() {
       <div className="max-w-7xl mx-auto relative z-10">
         <motion.h2
           ref={titleRef}
-          className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 sm:mb-12 md:mb-16 text-transparent bg-clip-text bg-gradient-to-r from-[#F9A826] to-[#FFC56E] text-center leading-tight py-2"
+          className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 sm:mb-12 md:mb-16 text-transparent bg-clip-text bg-gradient-to-r from-[#fda237] via-[#fdc592] to-[#fda237] text-center leading-tight py-2"
           variants={titleVariants}
           initial="hidden"
           animate={titleInView ? "visible" : "hidden"}

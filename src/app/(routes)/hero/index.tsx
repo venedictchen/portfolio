@@ -20,10 +20,10 @@ export default function HeroSection() {
             ref={titleRef}
             className="text-5xl md:text-6xl lg:text-8xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-[#F9A826] to-[#FFC56E] drop-shadow-lg"
           >
-            Hello, I'm{" "}
+            Hello, I&apos;m{" "}
             <span className="text-orange-200 relative inline-block">
               Venedict{" "}
-              <span className="absolute -top-16  sm:right-0 sm:-top-7 -right-7 -right-7 text-2xl text-orange-400">
+              <span className="absolute -top-16  sm:right-0 sm:-top-7 -right-7 text-2xl text-orange-400">
                 <Star className="w-7 h-7 fill-orange-400 text-orange-400 animate-spin" />
               </span>
             </span>
