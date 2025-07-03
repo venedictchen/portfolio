@@ -53,9 +53,9 @@ export function useContactForm() {
 
       toast.success("Message sent successfully!", {
         style: {
-          background: "#8dcd25", // color-success
-          color: "#471b1c",      // dark-brown text
-          border: "2px solid #5a130f", // dark-red border
+          background: "#8dcd25", 
+          color: "#471b1c",  
+          border: "2px solid #5a130f",
         },
       });
 
@@ -66,9 +66,9 @@ export function useContactForm() {
 
       toast.error("There was an error sending your message.", {
         style: {
-          background: "#e60000", // color-danger
+          background: "#e60000", 
           color: "white",
-          border: "2px solid #8b0000", // red border
+          border: "2px solid #8b0000",
         },
       });
     } finally {
