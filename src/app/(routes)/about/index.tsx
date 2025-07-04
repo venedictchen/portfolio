@@ -152,7 +152,10 @@ export default function AboutSection() {
               Hi Everyone, I am a Software Engineer enthusiast with a passion for building application and solve problem. Currently pursuing my degree in Computer Science at the University of Indonesia, I blend technical skills with creative thinking to build applications that are both functional and user-friendly.
             </motion.p>
             <motion.p className="text-base sm:text-lg mb-4 sm:mb-8 text-white/90 leading-relaxed" variants={itemVariants}>
-              My journey in tech began with a curiosity about how things work, which evolved into a career building software that makes a difference. I'm constantly learning and exploring new technologies to stay at the cutting edge of development.
+              My journey in tech began with a curiosity about how things work,
+              which evolved into a career building software that makes a
+              difference. I&apos;m constantly learning and exploring new
+              technologies to stay at the cutting edge of development.
             </motion.p>
             <motion.div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2" variants={itemVariants}>
               <motion.div variants={buttonVariants} whileHover="hover" whileTap={{ scale: 0.95 }}>
