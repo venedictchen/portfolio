@@ -1,5 +1,6 @@
 import { Mail, MapPin } from "lucide-react";
-import { FaGithub, FaLinkedin } from "react-icons/fa";
+import GitHubIcon from "@/components/icons/github-icon";
+import LinkedInIcon from "@/components/icons/linkedin-icon";
 
 export const CONTACT_INFO = [
     {
@@ -15,13 +16,13 @@ export const CONTACT_INFO = [
         href: null,
     },
     {
-        icon: FaGithub,
+        icon: GitHubIcon,
         label: "GitHub",
         value: "github.com/venedictchen",
         href: "https://github.com/venedictchen",
     },
     {
-        icon: FaLinkedin,
+        icon: LinkedInIcon,
         label: "LinkedIn",
         value: "linkedin.com/in/venedictchen",
         href: "https://linkedin.com/in/venedictchen",

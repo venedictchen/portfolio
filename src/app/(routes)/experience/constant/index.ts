@@ -8,7 +8,7 @@ export const EXPERIENCES: Experience[] = [
     duration: "June 2024 – Present",
     location: "OPPO",
     type: "work",
-    icon: "/images/logo/oppo.png",
+    icon: "/images/logo/oppo.webp",
     responsibilities: [
       "Built a production line monitoring dashboard to track units produced per hour (UPH) across 10+ stations, enabling real-time performance insights",
       "Applied Lean Manufacturing principles to visualize cycle time deviations, station idle times, and throughput delays",
@@ -23,7 +23,7 @@ export const EXPERIENCES: Experience[] = [
     duration: "Jan 2024 – June 2024",
     location: "FASILKOM UI",
     type: "education",
-    icon: "/images/logo/fasilkom.png",
+    icon: "/images/logo/fasilkom.webp",
     responsibilities: [
       "Appointed as coordinator to lead a team of 21 teaching assistants",
       "Collaborated and engaged in regular discussions with lecturers to enhance course content, improve teaching strategies, and address student challenges",
@@ -38,7 +38,7 @@ export const EXPERIENCES: Experience[] = [
     duration: "Aug 2023 – Jan 2024",
     location: "FASILKOM UI",
     type: "education",
-    icon: "/images/logo/fasilkom.png",
+    icon: "/images/logo/fasilkom.webp",
     responsibilities: [
       "Selected as one of 24 teaching assistants for the Data Structures and Algorithms course",
       "Graded programming assignments for 12 students and provided support during lab sessions",
@@ -52,7 +52,7 @@ export const EXPERIENCES: Experience[] = [
     duration: "Mar 2023 – Jan 2024",
     location: "RISTEK",
     type: "organization",
-    icon: "/images/logo/ristek.png",
+    icon: "/images/logo/ristek.webp",
     responsibilities: [
       "Selected as one of 6 members faculty-wide for a 12-month professional development team",
       "Contributed to four projects, applying best practices in full-stack development, building collaboration with team members and external stakeholders, and delivering impactful solutions",
@@ -66,7 +66,7 @@ export const EXPERIENCES: Experience[] = [
     duration: "May 2023 – Jan 2024",
     location: "BEM FASILKOM UI",
     type: "organization",
-    icon: "/images/logo/bem.png",
+    icon: "/images/logo/bem.webp",
     responsibilities: [
       "Selected as one of 8 members faculty-wide for a 12-month faculty student executive board development staff",
       "Led the student executive board internship program for 28 participants, coordinating and delivering web development learning materials between official staff and interns",
