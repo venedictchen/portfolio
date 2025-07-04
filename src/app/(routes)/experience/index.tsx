@@ -19,7 +19,7 @@ export default function ExperienceSection() {
   return (
     <motion.section
       ref={sectionRef}
-      className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#471b1c] via-[#5a130f] to-[#7e0001] relative overflow-hidden min-h-screen"
+      className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#471b1c] via-[#5a130f] to-[#7e0001] relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: isSectionInView ? 1 : 0.3 }}
       transition={{ duration: 0.8 }}

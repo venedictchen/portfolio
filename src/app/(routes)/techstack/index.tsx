@@ -11,13 +11,13 @@ export default function TechStackSection() {
             className="flex justify-center items-center md:ml-16 ml-8"
           >
             <div className="md:w-28 md:h-28 w-16 h-16 flex justify-center mx-auto items-center">
-              <Image
-                src={tech.src}
-                alt={tech.alt}
-                width={100}
-                height={100}
-                className="object-contain md:w-24 md:h-24 w-32 h-32 transition-transform duration-300 ease-in-out hover:scale-120"
-              />
+             <Image
+    src={tech.src}
+    alt={tech.alt}
+    width={64}
+    height={64}
+    className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+/>
             </div>
           </div>
         ))}

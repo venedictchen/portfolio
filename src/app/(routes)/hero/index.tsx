@@ -13,7 +13,7 @@ export default function HeroSection() {
   const chevronRef = useRef<HTMLDivElement>(null);
 
   return (
-    <section className="h-screen flex flex-col items-center justify-center relative overflow-hidden">
+    <section className="flex flex-col items-center justify-center relative overflow-hidden h-full min-h-screen">
       <div className="relative z-20 w-full mb-16">
         <div ref={contentRef} className="text-center px-4 sm:px-6 lg:px-8">
           <h1
