@@ -30,8 +30,8 @@ export default function MobileShowcaseCard({
   };
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleCardClick = () => {
-    setIsExpanded(!isExpanded);
+  const handleLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -41,10 +41,9 @@ export default function MobileShowcaseCard({
       variants={cardVariants}
       initial="hidden"
       animate={cardInView ? "visible" : "hidden"}
-      onClick={handleCardClick}
-      whileTap={{ scale: 0.98 }}
+      onClick={() => setIsExpanded(!isExpanded)}
+      whileTap={!isExpanded ? { scale: 0.98 } : {}}
     >
-      {/* Background Image */}
       <div className="absolute inset-0 overflow-hidden">
         <Image
           src={showcase.imageUrl}
@@ -55,14 +54,11 @@ export default function MobileShowcaseCard({
           loading="lazy"
           quality={75}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#3A0F09]/90 via-[#3A0F09]/60 to-[#3A0F09]/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#3A0F09]/90 via-[#3A0F09]/60 to-[#3A0F09]/40 scale-[1.02]" />
       </div>
 
       <div className="absolute inset-0 p-6 flex flex-col justify-between">
-        <motion.span
-          className="px-3 py-1 bg-gradient-to-r from-[#F9A826] to-[#FFC56E] text-[#3A0F09] text-sm font-medium rounded-full self-start"
-          whileTap={{ scale: 0.95 }}
-        >
+        <motion.span className="px-3 py-1 bg-gradient-to-r from-[#F9A826] to-[#FFC56E] text-[#3A0F09] text-sm font-medium rounded-full self-start">
           {showcase.category}
         </motion.span>
 
@@ -70,18 +66,6 @@ export default function MobileShowcaseCard({
           <h3 className="text-2xl font-bold text-white mb-2">
             {showcase.title}
           </h3>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="mb-2 border-[#F9A826]/30 text-[#F9A826] hover:text-white bg-[#F9A826]/10 hover:bg-[#F9A826]/20"
-          >
-            {isExpanded ? "Show Less" : "Show More"}
-          </Button>
 
           <div className="flex flex-wrap gap-2">
             {showcase.technologies.slice(0, 3).map((tech) => (
@@ -134,12 +118,13 @@ export default function MobileShowcaseCard({
 
           <div className="flex flex-wrap gap-2">
             {showcase.technologies.map((tech) => (
-              <span
+              <button
                 key={tech}
                 className="px-3 py-1 bg-[#4A1B12]/80 text-[#F9A826] text-xs rounded-full border border-[#F9A826]/30"
+                onClick={handleLinkClick}
               >
                 {tech}
-              </span>
+              </button>
             ))}
           </div>
 
@@ -149,6 +134,7 @@ export default function MobileShowcaseCard({
                 href={showcase.demoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleLinkClick}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F9A826] to-[#FFC56E] hover:from-[#FFC56E] hover:to-[#F9A826] text-[#3A0F09] rounded-lg transition-all duration-300 text-sm font-medium shadow-lg shadow-[#F9A826]/20"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -162,11 +148,12 @@ export default function MobileShowcaseCard({
                 href={showcase.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleLinkClick}
                 className="flex items-center gap-2 px-4 py-2 bg-[#4A1B12]/80 hover:bg-[#5C2318]/80 text-[#F9A826] rounded-lg transition-colors text-sm font-medium border border-[#F9A826]/30 hover:border-[#F9A826]/50"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                {<GitHubIcon className="w-4 h-4" />}
+                <GitHubIcon className="w-4 h-4" />
                 Code
               </motion.a>
             )}

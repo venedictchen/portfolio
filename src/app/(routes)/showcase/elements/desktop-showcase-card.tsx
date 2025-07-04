@@ -2,7 +2,6 @@ import { motion, useInView, type Variants } from "framer-motion";
 import { Showcase } from "../types";
 import { useRef } from "react";
 import { ExternalLink } from "lucide-react";
-// import { FaGithub } from "react-icons/fa";
 import Image from "next/image";
 import GitHubIcon from "@/components/icons/github-icon";
 
@@ -37,7 +36,6 @@ export default function DesktopShowcaseCard({
       initial="hidden"
       animate={cardInView ? "visible" : "hidden"}
     >
-      {/* Background Image */}
       <div className="absolute inset-0 overflow-hidden">
         <Image
           src={showcase.imageUrl}
@@ -48,7 +46,7 @@ export default function DesktopShowcaseCard({
           loading="lazy"
           quality={75}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#3A0F09]/90 via-[#3A0F09]/60 to-[#3A0F09]/40 group-hover:from-[#3A0F09]/95 group-hover:via-[#3A0F09]/70 group-hover:to-[#3A0F09]/50 transition-all duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#3A0F09]/90 via-[#3A0F09]/60 to-[#3A0F09]/40 group-hover:from-[#3A0F09]/95 group-hover:via-[#3A0F09]/70 group-hover:to-[#3A0F09]/50 transition-all duration-500 scale-[1.02]" />
       </div>
 
       <div className="absolute inset-0 p-6 flex flex-col justify-between">
@@ -83,7 +81,7 @@ export default function DesktopShowcaseCard({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {/* <FaGithub className="w-4 h-4 text-[#F9A826]" /> */}
+                <GitHubIcon className="w-4 h-4 text-[#F9A826]" />
               </motion.a>
             )}
           </div>
@@ -111,7 +109,6 @@ export default function DesktopShowcaseCard({
         </div>
       </div>
 
-      {/* Hover Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#3A0F09]/98 via-[#4A1B12]/95 to-[#5C2318]/90 backdrop-blur-sm p-6 flex flex-col justify-center border-t border-[#F9A826]/20 transition-transform duration-500 ease-out translate-y-full group-hover:translate-y-0">
         <div className="space-y-4">
           <div>
