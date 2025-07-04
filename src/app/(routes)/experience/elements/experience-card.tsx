@@ -4,7 +4,6 @@ import { motion, useInView } from "framer-motion";
 import { Calendar, MapPin } from "lucide-react";
 import { getTypeColor } from "../constant";
 import { ExperienceCardProps } from "../types";
-import { responsibilityVariants } from "../animations";
 import { useRef } from "react";
 
 export default function ExperienceCard({ experience, index }: ExperienceCardProps) {
