@@ -15,7 +15,7 @@ export default function HeroSection() {
   return (
     <section className="h-screen flex flex-col items-center justify-center relative overflow-hidden">
       <div className="relative z-20 w-full mb-16">
-        <div ref={contentRef} className="text-center">
+        <div ref={contentRef} className="text-center px-4 sm:px-6 lg:px-8">
           <h1
             ref={titleRef}
             className="text-5xl md:text-6xl lg:text-8xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-[#F9A826] to-[#FFC56E] drop-shadow-lg"
