@@ -58,33 +58,6 @@ export default function DesktopShowcaseCard({
           >
             {showcase.category}
           </motion.span>
-
-          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-300">
-            {showcase.demoUrl && (
-              <motion.a
-                href={showcase.demoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-[#F9A826]/20 backdrop-blur-sm rounded-full hover:bg-[#F9A826]/30 transition-colors border border-[#F9A826]/30"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <ExternalLink className="w-4 h-4 text-[#F9A826]" />
-              </motion.a>
-            )}
-            {showcase.githubUrl && (
-              <motion.a
-                href={showcase.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-[#F9A826]/20 backdrop-blur-sm rounded-full hover:bg-[#F9A826]/30 transition-colors border border-[#F9A826]/30"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <GitHubIcon className="w-4 h-4 text-[#F9A826]" />
-              </motion.a>
-            )}
-          </div>
         </div>
 
         <div>

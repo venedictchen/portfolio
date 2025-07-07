@@ -67,6 +67,19 @@ export default function MobileShowcaseCard({
             {showcase.title}
           </h3>
 
+           <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="mb-2 border-[#F9A826]/30 text-[#F9A826] hover:text-white bg-[#F9A826]/10 hover:bg-[#F9A826]/20"
+          >
+            {isExpanded ? "Show Less" : "Show More"}
+          </Button>
+
+
           <div className="flex flex-wrap gap-2">
             {showcase.technologies.slice(0, 3).map((tech) => (
               <span
