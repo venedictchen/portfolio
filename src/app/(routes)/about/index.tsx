@@ -273,7 +273,7 @@ export default function AboutSection() {
                 whileTap={{ scale: 0.95 }}
               >
                 <a
-                  href="https://drive.google.com/file/d/1rIMWrM6GDdMTtjrqi_LLrfohjtcZyUGE/view?usp=drivesdk"
+                  href="https://drive.google.com/file/d/1-owXMAty5kj4HZnTVVsOJu93D-wphJv5/view?usp=sharing"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
