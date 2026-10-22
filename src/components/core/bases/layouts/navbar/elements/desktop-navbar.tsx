@@ -4,26 +4,29 @@ import { LINKS } from "../constants";
 import { useNavbarStyles } from "@/components";
 
 export const DesktopNavbar = () => {
-  const { isScrolledPastScreenHeight, bgClass, roundedClass, positionClass } = useNavbarStyles();
+  const { barClass } = useNavbarStyles();
 
   return (
     <nav
-      className={`fixed z-50 h-16 w-full transition-all duration-700 flex items-center px-4 md:px-10 ${bgClass} ${roundedClass} ${positionClass} ${
-        isScrolledPastScreenHeight ? "top-4 scale-95" : "mt-4"
-      }`}
+      aria-label="Main"
+      className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${barClass}`}
     >
-      <div className="flex items-center justify-between w-full">
-        <Link href="/" className="text-2xl font-bold text-[#F9A826]">
-          Venedict<span className="text-white">Chen</span>
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between pl-(--page-left) pr-(--page-right)">
+        <Link href="#top" className="font-semibold text-cream hover:text-amber">
+          Venedict Chen
         </Link>
-
-        <div className="hidden md:flex space-x-16 ">
-          {Object.values(LINKS).map((link) => (
-            <Link key={link.href} href={link.href} className={`text-white`}>
-              <span className="font-normal">{link.name}</span>
-            </Link>
+        <ul className="flex gap-10">
+          {LINKS.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className="text-cream/80 transition-colors hover:text-amber"
+              >
+                {link.name}
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </nav>
   );

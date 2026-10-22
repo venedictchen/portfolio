@@ -1,21 +1,21 @@
-"use client";
-import AboutSection from "./about";
-import HeroSection from "./hero";
-import TechStackSection from "./techstack";
-import ExperienceSection from "./experience";
-import ContactSection from "./contact";
-import ShowcaseSection from "./showcase";
+import HeroSection from "./_sections/hero";
+import AboutSection from "./_sections/about";
+import ExperienceSection from "./_sections/experience";
+import ProjectsSection from "./_sections/projects";
+import WritingSection from "./_sections/writing";
+import ContactSection from "./_sections/contact";
+import ScrollRoute from "./_scroll-route";
 
 export default function Home() {
-
   return (
-    <main className="bg-dark-red min-h-screen text-white">
+    <>
       <HeroSection />
       <AboutSection />
-      <TechStackSection />
       <ExperienceSection />
-      <ShowcaseSection />
+      <ProjectsSection />
+      <WritingSection />
       <ContactSection />
-    </main>
+      <ScrollRoute />
+    </>
   );
 }

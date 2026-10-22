@@ -1,148 +1,65 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
 import { LINKS } from "../constants";
 import { useNavbarStyles } from "@/components";
-import { Menu, X } from "lucide-react";
 
 export const MobileNavbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isScrolledPastScreenHeight, bgClass, roundedClass, positionClass } =
-    useNavbarStyles();
-
-  const toggleMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-  };
-
-  const overlayVariants = {
-    hidden: {
-      opacity: 0,
-    },
-    visible: {
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        ease: "easeInOut" as const,
-      },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeInOut" as const,
-      },
-    },
-  };
-
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const linkVariants = {
-    hidden: {
-      x: 100,
-      opacity: 0,
-    },
-    visible: {
-      x: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut" as const,
-      },
-    },
-  };
-
-  const iconVariants = {
-    menu: {
-      opacity: 1,
-      rotate: 0,
-      transition: { duration: 0.3 },
-    },
-    close: {
-      opacity: 0,
-      rotate: 90,
-      transition: { duration: 0.3 },
-    },
-  };
+  const { barClass } = useNavbarStyles();
 
   return (
     <>
       <nav
-        className={`fixed z-50 h-16 w-full transition-all duration-700 flex items-center px-4 ${bgClass} ${roundedClass} ${positionClass} ${
-          isScrolledPastScreenHeight ? "top-4 scale-95" : "mt-4"
+        aria-label="Main"
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300 ${
+          isOpen ? "bg-page border-line" : barClass
         }`}
       >
-        <div className="flex items-center justify-between w-full">
-          <Link href="/" className="text-2xl font-bold text-[#F9A826] z-50">
-            Venedict<span className="text-white">Chen</span>
+        <div className="flex h-16 items-center justify-between px-5 md:pl-(--page-left) md:pr-(--page-right)">
+          <Link
+            href="#top"
+            onClick={() => setIsOpen(false)}
+            className="font-semibold text-cream"
+          >
+            Venedict Chen
           </Link>
-
-          <div className="flex justify-center items-center">
-            <button
-              onClick={toggleMenu}
-              className="text-white focus:outline-none z-50"
-              aria-label="Toggle menu"
-            >
-              <div className="relative w-8 h-8">
-                <motion.div
-                  className="absolute"
-                  variants={iconVariants}
-                  animate={isOpen ? "close" : "menu"}
-                >
-                  <Menu className="w-8 h-8" />
-                </motion.div>
-                <motion.div
-                  className="absolute"
-                  variants={iconVariants}
-                  animate={isOpen ? "menu" : "close"}
-                >
-                  <X className="w-8 h-8" />
-                </motion.div>
-              </div>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen((open) => !open)}
+            className="-mr-2 p-2 text-cream"
+            aria-label={isOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </nav>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 bg-dark-red bg-opacity-95 z-40 flex flex-col items-center justify-center"
-            variants={overlayVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            <motion.div
-              className="flex flex-col items-center space-y-8"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {Object.values(LINKS).map((link) => (
-                <motion.div key={link.href} variants={linkVariants}>
-                  <Link
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="text-white text-2xl hover:text-[#F9A826]"
-                  >
-                    {link.name}
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Fades in with a CSS transition; `inert` keeps hidden links out of the tab order */}
+      <div
+        id="mobile-menu"
+        inert={!isOpen}
+        className={`fixed inset-0 z-40 bg-page px-5 pt-24 md:pl-(--page-left) md:pr-(--page-right) transition-opacity duration-200 ${
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <ul className="space-y-6">
+          {LINKS.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                onClick={() => setIsOpen(false)}
+                className="text-3xl font-semibold text-cream hover:text-amber"
+              >
+                {link.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </>
   );
 };
