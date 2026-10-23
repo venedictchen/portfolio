@@ -1,4 +1,4 @@
-# Venedict Chen, portfolio
+# Venedict Chen
 
 Next.js 15 + Tailwind CSS 4. The page is server-rendered; only the mobile menu
 and the contact form run JavaScript in the browser.
