@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
-import { IsLoadedProvider } from "@/components";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -9,14 +8,10 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Venedict Chen",
-  description: "| Software Engineer Portfolio",
+  title: "Venedict Chen, Software Engineer",
+  description:
+    "Software engineer in Jakarta. I build web apps, internal tools and test automation, including Bikun Tracker for Universitas Indonesia.",
 };
 
 export default function RootLayout({
@@ -51,15 +46,9 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary`}
-      >
-        <IsLoadedProvider>
-          <>
-            <Toaster position="top-center" />
-            {children}
-          </>
-        </IsLoadedProvider>
+      <body className={`${geistSans.variable} antialiased`}>
+        <Toaster position="top-center" />
+        {children}
       </body>
     </html>
   );

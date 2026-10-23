@@ -4,6 +4,16 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --page: #3a0f09;
+  --surface: #4a1b12;
+  --line: rgba(253, 197, 146, 0.18);
+  --cream: #fbebdd;
+  --cream-muted: #d8b8a0;
+  --amber: #f9a826;
+  --peach: #fdc592;
+  --page-left: 3rem;
+  --page-right: 1.25rem;
+
   --color-dark-brown: #471b1c;
   --color-dark-red: #5a130f;
   --color-red: #8b0000;
@@ -59,7 +69,18 @@
   --sidebar-ring: var(--ring);
 }
 
+@media (min-width: 48rem) { :root { --page-left: 4rem; --page-right: 4rem; } }
+@media (min-width: 85rem) { :root { --page-left: 2rem; --page-right: 2rem; } }
+
 @theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-cream: var(--cream);
+  --color-cream-muted: var(--cream-muted);
+  --color-amber: var(--amber);
+  --color-peach: var(--peach);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-dark-brown: var(--color-dark-brown);
@@ -107,40 +128,165 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --animate-marquee-infinite: marquee 25s linear infinite;
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+
+.route { position: relative; height: 8.5rem; margin-inline: 3.25rem; }
+.route::before {
+  content: ""; position: absolute; left: -100vw; right: -100vw; top: 2.75rem;
+  height: 4px; background: var(--line);
+}
+.route-stop {
+  position: absolute; top: 2.1rem; width: 7.5rem; transform: translateX(-50%);
+  text-align: center; list-style: none;
+}
+.route-stop a { display: block; color: inherit; text-decoration: none; border-radius: 0.5rem; }
+.route-pin {
+  width: 1.4rem; height: 1.4rem; margin: 0 auto 0.75rem; border-radius: 9999px;
+  background: var(--page); border: 4px solid var(--peach);
+  animation: route-arrive 0.3s ease-out both;
+}
+.route-year { display: block; font-weight: 700; color: var(--cream); }
+.route-label { display: block; font-size: 0.875rem; line-height: 1.25; color: var(--cream-muted); }
+.route-stop a:hover .route-year { color: var(--amber); }
+.route-bus {
+  position: absolute; z-index: 1; top: -0.6rem; left: -8%; width: 4.25rem;
+  transform: translateX(-50%); animation: route-drive 5.2s both;
+}
+.route:not(.is-playing) :is(.route-bus, .route-pin) { animation-play-state: paused; }
+@keyframes route-drive {
+  0%   { left: -8%;  animation-timing-function: ease-out; }
+  10%  { left: 0%; }
+  14%  { left: 0%;   animation-timing-function: ease-in-out; }
+  28%  { left: 20%; }
+  32%  { left: 20%;  animation-timing-function: ease-in-out; }
+  46%  { left: 40%; }
+  50%  { left: 40%;  animation-timing-function: ease-in-out; }
+  64%  { left: 60%; }
+  68%  { left: 60%;  animation-timing-function: ease-in-out; }
+  82%  { left: 80%; }
+  86%  { left: 80%;  animation-timing-function: ease-in-out; }
+  100% { left: 100%; }
+}
+@keyframes route-arrive {
+  60% { transform: scale(1.3); }
+  to  { transform: scale(1); background: var(--amber); border-color: var(--amber); }
+}
+@media (max-width: 640px) {
+  /* Room on the right for the scroll bus to turn down after years. */
+  .route { margin-inline: 1.6rem 2.5rem; height: 7.5rem; }
+  .route-stop { width: 3.6rem; }
+  .route-year { font-size: 0.8rem; }
+  .route-label { font-size: 0.68rem; }
+  .route-pin { width: 1.1rem; height: 1.1rem; border-width: 3px; margin-top: 0.15rem; }
+  .route-bus { width: 3rem; top: 0.1rem; }
 }
 
-html { scroll-behavior: smooth; }
-
-.loader {
-   --s: 40px;
-   height: calc(var(--s)*0.9);
-   width: calc(var(--s)*5);
-  --v1:transparent,#000 0.5deg 108deg,#0000 109deg;
-  --v2:transparent,#000 0.5deg  36deg,#0000  37deg;
-  -webkit-mask:
-    conic-gradient(from 54deg  at calc(var(--s)*0.68) calc(var(--s)*0.57),var(--v1)),
-    conic-gradient(from 90deg  at calc(var(--s)*0.02) calc(var(--s)*0.35),var(--v2)),
-    conic-gradient(from 126deg at calc(var(--s)*0.5)  calc(var(--s)*0.7) ,var(--v1)),
-    conic-gradient(from 162deg at calc(var(--s)*0.5)  0                  ,var(--v2));
-  -webkit-mask-size: var(--s) var(--s);
-  -webkit-mask-composite: xor,destination-over;
-          mask-composite: exclude,add;
-  -webkit-mask-repeat:repeat-x;
-  background:linear-gradient(#ffb940 0 0) left/0% 100% #ddd no-repeat;
-  animation: l20 1.2s infinite linear;
+/* Cuts stay visible under the next one; the last child is the card. */
+.flip-cut {
+  position: absolute; inset: 0; opacity: 0; background: white;
+  animation: flip-cut 0.6s ease-out forwards;
 }
-@keyframes l20 {
-    90%,100% {background-size:100% 100%}
+.flip-cut:last-child { background: var(--amber); animation-duration: 1.2s; }
+.flip:not(.is-playing) .flip-cut { animation-play-state: paused; }
+@keyframes flip-cut {
+  from { opacity: 1; transform: scale(1.12); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* The bus waits for the frame to land. */
+@media (min-width: 64rem) {
+  section:has(.flip:not(.is-done)) :is(.route-bus, .route-pin) { animation-play-state: paused; }
+}
+
+/* The bus's motion path and the trail's stroke both start top left and go
+   clockwise, so they stay in step. */
+.photo-trail {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+  fill: none; stroke: var(--amber); stroke-width: 3; stroke-dasharray: 100;
+  animation: photo-trail 4s ease-in-out both;
+}
+.photo-bus {
+  position: absolute; top: 0; left: 0; z-index: 1; width: 3rem;
+  offset-path: inset(0 round 1rem); offset-anchor: 50% 95%; offset-rotate: auto;
+  animation: photo-lap 4s ease-in-out both;
+}
+.photo-lap:not(.is-playing) :is(.photo-trail, .photo-bus) { animation-play-state: paused; }
+@keyframes photo-trail { from { stroke-dashoffset: 100; } }
+@keyframes photo-lap { to { offset-distance: 100%; } }
+@supports not (offset-path: inset(0 round 1rem)) {
+  .photo-bus { display: none; }
+}
+
+/* html[data-scroll-route]: the scroll bus is running and replaces the hero
+   drive and the About lap. */
+.scroll-route { display: none; }
+.scroll-road, .scroll-trail { fill: none; stroke-width: 4; }
+.scroll-road { stroke: var(--line); }
+.scroll-trail { stroke: var(--amber); }
+.scroll-stop {
+  fill: var(--page); stroke: var(--peach); stroke-width: 4;
+  transition: fill 0.3s, stroke 0.3s;
+}
+.scroll-stop[data-lit] { fill: var(--amber); stroke: var(--amber); }
+.scroll-bus {
+  position: absolute; top: 0; left: 0; width: 4.25rem;
+  offset-anchor: 50% 50%; offset-rotate: auto;
+}
+.scroll-party * { opacity: 0; }
+.party-ring { fill: none; stroke: var(--amber); stroke-width: 3; }
+.party-ray { stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
+.party-twinkle { fill: var(--amber); transform-box: fill-box; transform-origin: center; }
+.scroll-route[data-arrived] .party-ring { animation: party-ring 2s ease-out infinite; }
+.scroll-route[data-arrived] .party-ray {
+  animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;
+}
+.scroll-route[data-arrived] .party-twinkle { animation: party-twinkle 1.4s ease-in-out infinite both; }
+.scroll-route[data-arrived] .scroll-bus { animation: party-glow 1.6s ease-in-out infinite; }
+@keyframes party-ring { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 4.5; } }
+@keyframes party-ray {
+  from { opacity: 0; scale: 0.6; }
+  25% { opacity: 1; }
+  to { opacity: 0; scale: 1.9; }
+}
+@keyframes party-shine {
+  0%, 100% { opacity: 0; scale: 1.2; }
+  50% { opacity: 0.8; scale: 1.5; }
+}
+@keyframes party-twinkle {
+  0%, 100% { opacity: 0; scale: 0; }
+  30% { opacity: 1; scale: 1.4; }
+  60% { opacity: 0.4; scale: 0.8; }
+  80% { opacity: 1; scale: 1; }
+}
+@keyframes party-glow {
+  50% { filter: drop-shadow(0 0 10px var(--amber)) drop-shadow(0 0 22px var(--amber)); }
+}
+html[data-scroll-route] .scroll-route {
+  display: block; position: absolute; top: 0; left: 0; width: 100%;
+  z-index: 30; pointer-events: none; overflow: hidden;
+}
+html[data-scroll-route] :is(.photo-bus, .photo-trail) { display: none; }
+html[data-scroll-route="phone"] .scroll-bus { width: 3rem; }
+/* visibility, not display: the scroll route measures the hero bus. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-scroll-route] .route-bus { visibility: hidden; animation: none; }
+  html[data-scroll-route] .route-pin { animation: none; transition: background-color 0.3s, border-color 0.3s; }
+  html[data-scroll-route] .route-pin[data-lit] { background: var(--amber); border-color: var(--amber); }
+  html[data-scroll-route] #experience ol > li { transition: opacity 0.5s; }
+  html[data-scroll-route] #experience ol > li > :last-child { transition: translate 0.5s; }
+  html[data-scroll-route] #experience ol > li:not([data-reached]) { opacity: 0; }
+  html[data-scroll-route] #experience ol > li:not([data-reached]) > :last-child { translate: 0 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-bus, .scroll-party { display: none; }
+  .photo-trail, .photo-bus { animation: none; }
+  html { scroll-behavior: auto; }
+  .route-bus { animation: none; left: 100%; }
+  .route-pin { animation: none; background: var(--amber); border-color: var(--amber); }
+  .flip-cut { animation: none; }
+  .flip-cut:last-child { opacity: 1; }
 }
 
 .dark {
@@ -183,6 +329,6 @@ html { scroll-behavior: smooth; }
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-page text-cream font-sans;
   }
 }

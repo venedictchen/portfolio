@@ -1,45 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
 
+// True once the page has scrolled a little, so the navbar can get a solid
+// background. Checked at most once per frame with a passive listener.
 export const useNavbarStyles = () => {
-    const [isScrolledPastScreenHeight, setIsScrolledPastScreenHeight] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            const isScrolledPast = window.scrollY >= window.innerHeight - 60;
-            setIsScrolledPastScreenHeight(isScrolledPast);
-        };
-        handleScroll();
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
-
-
-    const getBgClass = () => {
-        if (isScrolledPastScreenHeight) {
-            return "bg-dark-red";
-        }
-        return "bg-transparent";
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      setIsScrolled(window.scrollY > 24);
     };
-
-    const getRoundedClass = () => {
-        if (isScrolledPastScreenHeight) {
-            return "rounded-2xl";
-        }
-        return "";
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
     };
-
-    const getPositionClass = () => {
-        if (isScrolledPastScreenHeight) {
-            return "top-4 scale-95";
-        }
-        return "top-0";
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
     };
+  }, []);
 
-    return {
-        isScrolledPastScreenHeight,
-        bgClass: getBgClass(),
-        roundedClass: getRoundedClass(),
-        positionClass: getPositionClass(),
-    };
+  return {
+    isScrolled,
+    barClass: isScrolled
+      ? "bg-page/95 border-line"
+      : "bg-transparent border-transparent",
+  };
 };
