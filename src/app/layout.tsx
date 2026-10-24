@@ -9,7 +9,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Venedict Chen, Software Engineer",
+  title: "Venedict Chen | Software Engineer",
   description:
     "Software engineer in Jakarta. I build web apps, internal tools and test automation, including Bikun Tracker for Universitas Indonesia.",
 };
