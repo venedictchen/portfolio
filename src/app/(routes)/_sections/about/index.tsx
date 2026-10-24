@@ -34,21 +34,21 @@ export default function AboutSection() {
           </h2>
           <div className="mt-8 max-w-[62ch] space-y-5 text-lg leading-relaxed text-cream/90">
             <p>
-              I&apos;m a software engineer from Jakarta. I graduated in Computer
+              Venedict is a software engineer from Jakarta. He graduated in Computer
               Science from Universitas Indonesia in 2026, and for the past year
-              I&apos;ve been a QA intern at Accenture, building tools that automate
+              Venedict have been a QA intern at Accenture, building tools that automate
               API testing and cut test data setup from 30 minutes to under 10
               seconds.
             </p>
             <p>
-              Before that I interned at OPPO Indonesia&apos;s factory, where I built
+              Before that Venedict interned at OPPO Indonesia&apos;s factory, where he built
               a production line dashboard and a web-controlled warehouse locker
-              system. At university I led RISTEK&apos;s web development team,
+              system. At university he led RISTEK&apos;s web development team,
               coordinated 21 teaching assistants for Advanced Programming, and
               researched generating user interfaces from models.
             </p>
             <p>
-              I like work where the result is something people actually use,
+              Venedict like work where the result is something people actually use,
               and I care as much about testing it as building it.
             </p>
           </div>
