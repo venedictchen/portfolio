@@ -1,5 +1,5 @@
 import { ContactForm } from "./elements/contact-form";
-import { EMAIL, GITHUB_URL, LINKEDIN_URL } from "../../_constants";
+import { EMAIL, GITHUB_URL, LINKEDIN_URL } from "../../constants";
 
 const linkClass =
   "font-semibold text-peach underline decoration-peach/40 decoration-2 underline-offset-4 hover:text-amber hover:decoration-amber";

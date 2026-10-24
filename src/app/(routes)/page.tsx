@@ -4,7 +4,7 @@ import ExperienceSection from "./_sections/experience";
 import ProjectsSection from "./_sections/projects";
 import WritingSection from "./_sections/writing";
 import ContactSection from "./_sections/contact";
-import ScrollRoute from "./_scroll-route";
+import ScrollRoute from "./scroll-route";
 
 export default function Home() {
   return (

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Bus, PlayOnView } from "@/components";
-import { CV_URL, EMAIL } from "../../_constants";
+import { CV_URL, EMAIL } from "../../constants";
 import { SKILLS } from "./constants";
 
 export default function AboutSection() {

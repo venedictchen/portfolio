@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Bus, PlayOnView } from "@/components";
-import { CV_URL } from "../../_constants";
+import { CV_URL } from "../../constants";
 import { CUTS, isLogo, LAND_AT, NOW, STOPS } from "./constants";
 
 export default function HeroSection() {
