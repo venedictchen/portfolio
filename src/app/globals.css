@@ -242,6 +242,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   position: absolute; top: 0; left: 0; width: 4.25rem;
   transform-origin: 0 0; transform: translate(-50%, -50%); will-change: transform;
 }
+/* The sticky bus's frame: stuck to the top of the screen while the bus
+   travels, then carried off with the page. */
+.bus-ride { position: absolute; top: 0; left: 0; width: 100%; }
+.bus-sticky { position: sticky; top: 0; height: 0; }
+.scroll-bus[data-frame="screen"] > .bus-face { opacity: 0; }
 .scroll-party * { opacity: 0; }
 .party-ring { fill: none; stroke: var(--amber); stroke-width: 3; }
 .party-ray { stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
@@ -251,7 +256,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;
 }
 .scroll-route[data-arrived] .party-twinkle { animation: party-twinkle 1.4s ease-in-out infinite both; }
-.scroll-route[data-arrived] .scroll-bus > svg { animation: party-glow 1.6s ease-in-out infinite; }
+.scroll-route[data-arrived] .bus-face > svg { animation: party-glow 1.6s ease-in-out infinite; }
 @keyframes party-ring { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 4.5; } }
 @keyframes party-ray {
   from { opacity: 0; scale: 0.6; }
@@ -273,7 +278,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 }
 html[data-scroll-route] .scroll-route {
   display: block; position: absolute; top: 0; left: 0; width: 100%;
-  z-index: 30; pointer-events: none; overflow: hidden;
+  z-index: 30; pointer-events: none; overflow: hidden; overflow: clip;
 }
 html[data-scroll-route] :is(.photo-bus, .photo-trail) { display: none; }
 html[data-scroll-route="phone"] .scroll-bus { width: 3rem; }

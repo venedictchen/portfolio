@@ -16,6 +16,12 @@ const TIMELINE =
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
+// Even so, a browser can show a frame from a scroll position or two back
+// (Safari does). On straights that run down the page the bus holds still on
+// screen, so there a second bus rides a sticky frame that the browser keeps
+// in step with the scroll, and a stale frame barely moves it. Sticky needs
+// the route's clip to be overflow: clip, not a scroll container.
+const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
 
 // pace: minimum scroll per px of road to the next point
 type Point = { x: number; y: number; r: number; pace?: number };
@@ -43,7 +49,10 @@ type Route = {
   legs: Leg[];
   roads: number[]; // distance along the road of each sample
   scroll: number[]; // scroll position at each sample
-  frames: Frame[]; // the bus's keyframes
+  frames: Frame[]; // the bus's keyframes on the page
+  stuck: number; // how far the sticky frame rides down the route
+  screen: Frame[]; // the bus's keyframes in the sticky frame
+  shown: [scroll: number, screen: number][]; // from where each bus shows (1: the sticky one)
   trail: Step[][]; // each leg's keyframes
   years: number[];
   jobs: Stop[];
@@ -217,6 +226,24 @@ function keyframes(scroll: number[], xs: number[], ys: number[], headings: numbe
   const frames = simplify(scroll, [[xs, 0.25], [ys, 0.25], [headings, 0.5]]) as Frame[];
   if (frames[0][0] > 0) frames.unshift([0, ...frames[0].slice(1)] as Frame);
   return frames;
+}
+
+// The bus's keyframes in the sticky frame: its place on the page less the
+// frame's, which rides with the scroll from `start` for `stuck` px. Between
+// keyframes both change linearly, but for where the frame sticks and unsticks.
+function inFrame(frames: Frame[], start: number, stuck: number) {
+  const ride = (at: number) => Math.min(Math.max(at - start, 0), stuck);
+  const out: Frame[] = [];
+  frames.forEach((frame, i) => {
+    const prev = frames[i - 1];
+    for (const kink of [start, start + stuck]) {
+      if (!prev || kink <= prev[0] || kink >= frame[0]) continue;
+      const t = (kink - prev[0]) / (frame[0] - prev[0]);
+      out.push([kink, ...[1, 2, 3].map((k) => prev[k] + t * (frame[k] - prev[k]))] as Frame);
+    }
+    out.push(frame);
+  });
+  return out.map(([at, x, y, heading]): Frame => [at, x, Math.round((y - ride(at)) * 100) / 100, heading]);
 }
 
 // Each leg's keyframes, to within a quarter pixel: how much of it is drawn
@@ -402,6 +429,16 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     view,
     last
   );
+  // The sticky frame rides from the top of the route to where the bus arrives.
+  const stuck = Math.max(scroll[scroll.length - 1] - toPage, 0);
+  const frames = keyframes(scroll, xs, ys, turns);
+  // The sticky bus shows on legs running up or down the page, the other on
+  // the rest, swapping halfway round each corner.
+  const shown: [number, number][] = [];
+  turns.forEach((heading, i) => {
+    const sticky = Number(Math.abs(Math.sin((heading * Math.PI) / 180)) > Math.SQRT1_2);
+    if (shown[shown.length - 1]?.[1] !== sticky) shown.push([scroll[i], sticky]);
+  });
 
   return {
     height: end + 60,
@@ -413,7 +450,10 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     legs,
     roads,
     scroll,
-    frames: keyframes(scroll, xs, ys, turns),
+    frames,
+    stuck,
+    screen: inFrame(frames, toPage, stuck),
+    shown,
     trail: reveals(legs, roads, scroll),
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
@@ -443,11 +483,35 @@ function animations(route: Route) {
       `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:${from}px ${to}px}`
     );
   };
-  const bus = rule("scroll-bus", ".scroll-bus", route.frames.map(([at, x, y, heading]) => [at, `translate:${x}px ${y}px;rotate:${heading}deg`]));
+  const drive = (frames: Frame[]) =>
+    frames.map(([at, x, y, heading]): [number, string] => [at, `translate:${x}px ${y}px;rotate:${heading}deg`]);
+  let css = rule("bus-page", '.scroll-bus[data-frame="page"]', drive(route.frames));
+  if (STICKY) {
+    css += rule("bus-screen", '.scroll-bus[data-frame="screen"]', drive(route.screen));
+    // Each bus's face fades in and out in a step where the other takes over.
+    const end = route.scroll[route.scroll.length - 1];
+    for (const [which, frame] of ["page", "screen"].entries()) {
+      const steps: [number, string][] = [];
+      route.shown.forEach(([at, sticky], i) => {
+        const opacity = `opacity:${Number(sticky === which)}`;
+        if (i) steps.push([at - 0.01, steps[steps.length - 1][1]]);
+        steps.push([at, opacity]);
+      });
+      steps.push([Math.max(end, steps[steps.length - 1][0] + 1), steps[steps.length - 1][1]]);
+      css += rule(`bus-face-${frame}`, `[data-frame="${frame}"] > .bus-face`, steps);
+    }
+  }
   const legs = route.legs.map((leg, i) =>
     leg.length > 0 ? rule(`trail-${i}`, `[data-leg="${i}"]`, route.trail[i].map(([at, u]) => [at, reveal(leg, u).join(":")])) : ""
   );
-  return bus + legs.join("");
+  return css + legs.join("");
+}
+
+// Which bus shows at scroll y: 1 for the sticky one.
+function showing(shown: Route["shown"], y: number) {
+  let sticky = shown[0][1];
+  for (const [at, which] of shown) if (at <= y) sticky = which;
+  return sticky;
 }
 
 // A leg of the trail: for a straight, a bar 1px longer so it overlaps the
@@ -543,7 +607,9 @@ export default function ScrollRoute() {
   useEffect(() => {
     const overlay = ref.current;
     if (!route || !overlay) return;
-    const bus = overlay.querySelector<HTMLElement>(".scroll-bus");
+    const bus = overlay.querySelector<HTMLElement>('.scroll-bus[data-frame="page"]');
+    const stickyBus = overlay.querySelector<HTMLElement>('.scroll-bus[data-frame="screen"]');
+    const faces = [bus, stickyBus].map((el) => el?.querySelector<HTMLElement>(".bus-face"));
     const legs = overlay.querySelectorAll<HTMLElement>("[data-leg]");
     const years = document.querySelectorAll(".route-pin");
     const pins = overlay.querySelectorAll(".scroll-stop");
@@ -567,6 +633,11 @@ export default function ScrollRoute() {
       // Without scroll timelines the bus and trail follow from here.
       if (!TIMELINE) {
         if (bus) place(bus, route.frames, y);
+        if (stickyBus) {
+          place(stickyBus, route.screen, y);
+          const sticky = showing(route.shown, y);
+          faces.forEach((face, which) => face?.style.setProperty("opacity", `${Number(sticky === which)}`));
+        }
         legs.forEach((el) => {
           const i = Number(el.dataset.leg);
           const leg = route.legs[i];
@@ -607,9 +678,22 @@ export default function ScrollRoute() {
           <div className="scroll-trail">
             {route.legs.map((leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} />)}
           </div>
-          <div className="scroll-bus">
-            <Bus className="block w-full" />
+          <div className="scroll-bus" data-frame="page">
+            <div className="bus-face">
+              <Bus className="block w-full" />
+            </div>
           </div>
+          {STICKY && (
+            <div className="bus-ride" style={{ height: route.stuck }}>
+              <div className="bus-sticky">
+                <div className="scroll-bus" data-frame="screen">
+                  <div className="bus-face">
+                    <Bus className="block w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {TIMELINE && <style>{animations(route)}</style>}
         </>
       )}
