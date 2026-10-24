@@ -20,9 +20,10 @@ const TIMELINE =
 // pace: minimum scroll per px of road to the next point
 type Point = { x: number; y: number; r: number; pace?: number };
 // A straight or corner of the road: where it starts along the road and on
-// screen, its heading there, and where its command sits in the path.
-type Leg = { s: number; length: number; x: number; y: number; dx: number; dy: number; from: number; to: number };
+// screen and its heading there; corners also turn towards (nx, ny) with radius r.
+type Leg = { s: number; length: number; x: number; y: number; dx: number; dy: number; r: number; nx: number; ny: number };
 type Frame = [scroll: number, x: number, y: number, heading: number];
+type Step = [scroll: number, u: number]; // u: px of a leg drawn by then
 
 const RAYS = Array.from({ length: 12 }, (_, i) => i * 30);
 // [angle in degrees, distance, delay in seconds]
@@ -37,12 +38,13 @@ type Route = {
   lead: number; // px of road before a job's stop at which it appears
   pin: number;
   party: number; // celebration scale
-  path: string;
   road: string; // path without the hero line, which the hero draws itself
   length: number;
   legs: Leg[];
-  scroll: number[]; // scroll position for each STEP of road
+  roads: number[]; // distance along the road of each sample
+  scroll: number[]; // scroll position at each sample
   frames: Frame[]; // the bus's keyframes
+  trail: Step[][]; // each leg's keyframes
   years: number[];
   jobs: Stop[];
   stops: Stop[];
@@ -51,14 +53,19 @@ type Route = {
 // Rounds the corners of an axis-aligned polyline into an SVG path, sampling
 // position, heading and pace every STEP along it.
 function trace(corners: Point[]) {
+  // On whole pixels, which layout and drawing both hold exactly, so the
+  // trail's boxes line up with the road under it.
+  const grid = corners.map((p) => ({ ...p, x: Math.round(p.x), y: Math.round(p.y) }));
   // Corners closer together than their radii share the gap, so the road
   // never doubles back.
-  const gap = (i: number, j: number) =>
-    Math.abs(corners[j].x - corners[i].x) + Math.abs(corners[j].y - corners[i].y);
-  const ends = corners.length - 1;
-  const points = corners.map((p, i) =>
-    i === 0 || i === ends ? p : { ...p, r: Math.min(p.r, gap(i - 1, i) / (i > 1 ? 2 : 1), gap(i, i + 1) / (i < ends - 1 ? 2 : 1)) }
-  );
+  const gap = (i: number, j: number) => Math.abs(grid[j].x - grid[i].x) + Math.abs(grid[j].y - grid[i].y);
+  const ends = grid.length - 1;
+  const points = grid.map((p, i) => {
+    if (i === 0 || i === ends) return p;
+    const r = Math.min(p.r, gap(i - 1, i) / (i > 1 ? 2 : 1), gap(i, i + 1) / (i < ends - 1 ? 2 : 1));
+    return { ...p, r: Math.floor(r) };
+  });
+  const roads: number[] = [];
   const xs: number[] = [];
   const ys: number[] = [];
   const headings: number[] = []; // degrees, unwrapped so turns interpolate the short way
@@ -76,14 +83,16 @@ function trace(corners: Point[]) {
     [dx, dy]: number[],
     length: number,
     pace: number,
-    at: (u: number) => number[]
+    at: (u: number) => number[],
+    [r, nx, ny] = [0, 0, 0]
   ) => {
-    legs.push({ s, length, ...start, dx, dy, from: d.length, to: d.length + command.length });
+    legs.push({ s, length, ...start, dx, dy, r, nx, ny });
     d += command;
     for (; next <= s + length; next += STEP) {
       const [x, y, heading] = at(next - s);
       const degrees = (heading * 180) / Math.PI;
       const prev = headings.at(-1) ?? 0;
+      roads.push(next);
       xs.push(x);
       ys.push(y);
       headings.push(degrees + 360 * Math.round((prev - degrees) / 360));
@@ -130,17 +139,19 @@ function trace(corners: Point[]) {
           cy - ny * r * cos + dy * r * sin,
           Math.atan2(dy * cos + ny * sin, dx * cos + nx * sin),
         ];
-      }
+      },
+      [r, nx, ny]
     );
   }
   // And the very end, past the last STEP.
   if (next - STEP < s) {
+    roads.push(s);
     xs.push(points[ends].x);
     ys.push(points[ends].y);
     headings.push(headings[headings.length - 1]);
     paces.push(paces[paces.length - 1]);
   }
-  return { d, road: heroEnd + d.slice(d.indexOf(" A ")), length: s, xs, ys, headings, paces, runs, legs };
+  return { road: heroEnd + d.slice(d.indexOf(" A ")), length: s, roads, xs, ys, headings, paces, runs, legs };
 }
 
 // Bus position on screen, as fractions of the viewport height.
@@ -184,24 +195,49 @@ function timetable(
   return scroll;
 }
 
-// The bus's keyframes: the samples, less those that interpolating between
-// their neighbours puts within a quarter pixel and half a degree.
-function keyframes(scroll: number[], xs: number[], ys: number[], headings: number[]): Frame[] {
-  const near = (v: number[], from: number, to: number, k: number, t: number, tolerance: number) =>
-    Math.abs(v[from] + t * (v[to] - v[from]) - v[k]) <= tolerance;
+// Keyframes from samples taken at increasing scroll positions: the samples,
+// less those that interpolating between their neighbours puts within
+// tolerance in every series ([values, tolerance]).
+function simplify(scroll: number[], series: [number[], number][]) {
   const keep = [0];
   for (let from = 0, to = 2; to < scroll.length; to++) {
     let fits = to - from < 256;
     for (let k = from + 1; fits && k < to; k++) {
       const t = (scroll[k] - scroll[from]) / (scroll[to] - scroll[from]);
-      fits = near(xs, from, to, k, t, 0.25) && near(ys, from, to, k, t, 0.25) && near(headings, from, to, k, t, 0.5);
+      fits = series.every(([v, tolerance]) => Math.abs(v[from] + t * (v[to] - v[from]) - v[k]) <= tolerance);
     }
     if (!fits) keep.push((from = to - 1));
   }
-  keep.push(scroll.length - 1);
-  const frames = keep.map((i) => [scroll[i], xs[i], ys[i], headings[i]].map((v) => Math.round(v * 100) / 100) as Frame);
+  if (scroll.length > 1) keep.push(scroll.length - 1);
+  return keep.map((i) => [scroll[i], ...series.map(([v]) => v[i])].map((v) => Math.round(v * 100) / 100));
+}
+
+// The bus's keyframes, to within a quarter pixel and half a degree.
+function keyframes(scroll: number[], xs: number[], ys: number[], headings: number[]) {
+  const frames = simplify(scroll, [[xs, 0.25], [ys, 0.25], [headings, 0.5]]) as Frame[];
   if (frames[0][0] > 0) frames.unshift([0, ...frames[0].slice(1)] as Frame);
   return frames;
+}
+
+// Each leg's keyframes, to within a quarter pixel: how much of it is drawn
+// from the scroll where the bus reaches it to where it leaves.
+function reveals(legs: Leg[], roads: number[], scroll: number[]) {
+  const scrollAt = (at: number) => {
+    let i = 0;
+    for (let step = 1 << 15; step; step >>= 1) if (i + step < roads.length && roads[i + step] <= at) i += step;
+    const j = Math.min(i + 1, roads.length - 1);
+    return roads[j] > roads[i] ? scroll[i] + ((at - roads[i]) / (roads[j] - roads[i])) * (scroll[j] - scroll[i]) : scroll[i];
+  };
+  return legs.map(({ s, length }) => {
+    const points: Step[] = [[scrollAt(s), 0]];
+    roads.forEach((at, k) => {
+      if (at > s && at < s + length && scroll[k] > points[points.length - 1][0]) points.push([scroll[k], at - s]);
+    });
+    const end = scrollAt(s + length);
+    if (end > points[points.length - 1][0]) points.push([end, length]);
+    else points[points.length - 1][1] = length;
+    return simplify(points.map(([at]) => at), [[points.map(([, u]) => u), 0.25]]) as Step[];
+  });
 }
 
 // Mobile toolbars change innerHeight as they slide in and out on scroll; the
@@ -329,7 +365,7 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     projectsOn = [11, rightX];
     writingOn = [13, leftX];
   }
-  const { d, road, length, xs, ys, headings: turns, paces, runs, legs } = trace(points);
+  const { road, length, roads, xs, ys, headings: turns, paces, runs, legs } = trace(points);
   // The lap's scroll budget: the most the page can scroll while the photo's
   // bottom (after the right edge) stays above BOTTOM and its top (at the
   // end) below TOP. 90% of it, for slack.
@@ -372,27 +408,73 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     lead: mode === "phone" ? 0.25 * view : 0,
     pin: mode === "phone" ? 7 : 9,
     party: Math.min(Math.max((clearance + 8) / 60, 0.45), 1),
-    path: d,
     road,
     length,
     legs,
+    roads,
     scroll,
     frames: keyframes(scroll, xs, ys, turns),
+    trail: reveals(legs, roads, scroll),
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
     stops: [on(projectsOn, projectsH2.midY), on(writingOn, writingH2.midY), { at: length, x: endX, y: end }],
   };
 }
 
-// The bus's keyframes on the page's scroll timeline.
-function busAnimation(frames: Frame[]) {
-  const end = frames[frames.length - 1][0];
-  const steps = frames.map(
-    ([scroll, x, y, heading]) => `${((scroll / end) * 100).toFixed(4)}%{translate:${x}px ${y}px;rotate:${heading}deg}`
+// How a leg shows u px of itself, as [property, value]: a straight's bar
+// scales out along it, a corner's half-ring turns into its quarter. Both
+// animate on the compositor, and rest square to the pixel grid.
+function reveal(leg: Leg, u: number) {
+  // Keyframes round to hundredths, so within that of the end is the end.
+  const f = u > leg.length - 0.01 ? 1 : Math.max(u / leg.length, 0);
+  if (leg.r) return ["rotate", `${(f * 90 - 180).toFixed(2)}deg`];
+  return ["scale", leg.dx ? `${f.toFixed(4)} 1` : `1 ${f.toFixed(4)}`];
+}
+
+// The bus and each leg of the trail on the page's scroll timeline, their
+// keyframes' scroll positions mapped onto each one's range.
+function animations(route: Route) {
+  const rule = (name: string, selector: string, steps: [number, string][]) => {
+    const [from, to] = [steps[0][0], steps[steps.length - 1][0]];
+    if (to <= from) return "";
+    const frames = steps.map(([at, value]) => `${(((at - from) / (to - from)) * 100).toFixed(4)}%{${value}}`);
+    return (
+      `@keyframes ${name}{${frames.join("")}}` +
+      `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:${from}px ${to}px}`
+    );
+  };
+  const bus = rule("scroll-bus", ".scroll-bus", route.frames.map(([at, x, y, heading]) => [at, `translate:${x}px ${y}px;rotate:${heading}deg`]));
+  const legs = route.legs.map((leg, i) =>
+    leg.length > 0 ? rule(`trail-${i}`, `[data-leg="${i}"]`, route.trail[i].map(([at, u]) => [at, reveal(leg, u).join(":")])) : ""
   );
+  return bus + legs.join("");
+}
+
+// A leg of the trail: for a straight, a bar 1px longer so it overlaps the
+// corner after; for a corner, a half-ring (stroked like the road, so they
+// line up) turning about the corner's centre inside its quarter, in a frame
+// turned (and mirrored) so the corner runs clockwise from 0°.
+function TrailLeg({ leg, index }: { leg: Leg; index: number }) {
+  const { x, y, dx, dy, r, nx, ny, length } = leg;
+  if (!r) {
+    const long = length + 1;
+    const style = dx
+      ? { left: dx > 0 ? x : x - long, top: y - 2, width: long, height: 4, transformOrigin: dx > 0 ? "left" : "right" }
+      : { left: x - 2, top: dy > 0 ? y : y - long, width: 4, height: long, transformOrigin: dy > 0 ? "top" : "bottom" };
+    return <div className="trail-bar" data-leg={index} style={style} />;
+  }
+  const outer = r + 2;
+  const start = (Math.atan2(-ny, -nx) * 180) / Math.PI;
   return (
-    `@keyframes scroll-bus{${steps.join("")}}` +
-    `.scroll-bus{animation:scroll-bus auto linear both;animation-timeline:scroll(root);animation-range:0px ${end}px}`
+    <div className="trail-corner" style={{ left: x + nx * r, top: y + ny * r, rotate: `${start}deg`, scale: `1 ${Math.sign(ny * dx - nx * dy)}` }}>
+      <div className="trail-quadrant" style={{ width: outer, height: outer }}>
+        <div className="trail-rotor" data-leg={index}>
+          <svg className="trail-half" style={{ left: -outer }} width={2 * outer} height={outer} viewBox={`${-outer} 0 ${2 * outer} ${outer}`}>
+            <path d={`M ${r} 0 A ${r} ${r} 0 0 1 ${-r} 0`} />
+          </svg>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -462,32 +544,13 @@ export default function ScrollRoute() {
     const overlay = ref.current;
     if (!route || !overlay) return;
     const bus = overlay.querySelector<HTMLElement>(".scroll-bus");
-    // The legs behind the bus in one path and the one it's on in another, so
-    // a frame repaints only the leg, not a trail the size of the page.
-    const [done, tip] = overlay.querySelectorAll(".scroll-trail");
+    const legs = overlay.querySelectorAll<HTMLElement>("[data-leg]");
     const years = document.querySelectorAll(".route-pin");
     const pins = overlay.querySelectorAll(".scroll-stop");
     const jobs = document.querySelectorAll("#experience ol > li");
-    const { scroll, length, legs, path } = route;
+    const { roads, scroll, length } = route;
+    const drawn: number[] = [];
     let frame = 0;
-    let shown = -1;
-    const draw = (at: number) => {
-      let i = legs.length - 1;
-      while (i > 0 && legs[i].s > at) i--;
-      const leg = legs[i];
-      if (i !== shown) {
-        shown = i;
-        // From 1px back, overlapping the legs behind so no seam shows.
-        const lead = i ? 1 : 0;
-        done.setAttribute("d", path.slice(0, i ? leg.from : 0));
-        tip.setAttribute(
-          "d",
-          `M ${leg.x - leg.dx * lead} ${leg.y - leg.dy * lead} L ${leg.x} ${leg.y}${path.slice(leg.from, leg.to)}`
-        );
-        tip.setAttribute("stroke-dasharray", `${lead + leg.length}`);
-      }
-      tip.setAttribute("stroke-dashoffset", `${leg.length - Math.min(at - leg.s, leg.length)}`);
-    };
     const update = () => {
       frame = 0;
       const y = window.scrollY;
@@ -497,11 +560,22 @@ export default function ScrollRoute() {
         let i = 0;
         for (let step = 1 << 15; step; step >>= 1)
           if (i + step < scroll.length && scroll[i + step] <= y) i += step;
-        const between = i + 1 < scroll.length ? (y - scroll[i]) / (scroll[i + 1] - scroll[i]) : 0;
-        at = Math.min(Math.max((i + between) * STEP, 0), length);
+        const j = Math.min(i + 1, scroll.length - 1);
+        const between = j > i ? (y - scroll[i]) / (scroll[j] - scroll[i]) : 0;
+        at = Math.min(Math.max(roads[i] + between * (roads[j] - roads[i]), 0), length);
       }
-      if (!TIMELINE && bus) place(bus, route.frames, y);
-      draw(at);
+      // Without scroll timelines the bus and trail follow from here.
+      if (!TIMELINE) {
+        if (bus) place(bus, route.frames, y);
+        legs.forEach((el) => {
+          const i = Number(el.dataset.leg);
+          const leg = route.legs[i];
+          const u = Math.min(Math.max(at - leg.s, 0), leg.length);
+          if (drawn[i] === u) return;
+          drawn[i] = u;
+          el.style.setProperty(...(reveal(leg, u) as [string, string]));
+        });
+      }
       route.years.forEach((year, i) => years[i]?.toggleAttribute("data-lit", at >= year));
       [...route.jobs, ...route.stops].forEach((stop, i) => pins[i]?.toggleAttribute("data-lit", at >= stop.at));
       route.jobs.forEach((job, i) => jobs[i]?.toggleAttribute("data-reached", at >= job.at - route.lead));
@@ -524,17 +598,19 @@ export default function ScrollRoute() {
         <>
           <svg width="100%" height={route.height}>
             <path className="scroll-road" d={route.road} />
-            <path className="scroll-trail" />
-            <path className="scroll-trail" />
             {[...route.jobs, ...route.stops].map((stop) => (
               <circle key={stop.at} className="scroll-stop" cx={stop.x} cy={stop.y} r={route.pin} />
             ))}
             <Celebration at={route.stops[route.stops.length - 1]} scale={route.party} />
           </svg>
+          {/* Over the stops, but it only reaches each as it lights up amber too. */}
+          <div className="scroll-trail">
+            {route.legs.map((leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} />)}
+          </div>
           <div className="scroll-bus">
             <Bus className="block w-full" />
           </div>
-          {TIMELINE && <style>{busAnimation(route.frames)}</style>}
+          {TIMELINE && <style>{animations(route)}</style>}
         </>
       )}
     </div>

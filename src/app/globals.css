@@ -221,9 +221,17 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 /* html[data-scroll-route]: the scroll bus is running and replaces the hero
    drive and the About lap. */
 .scroll-route { display: none; }
-.scroll-road, .scroll-trail { fill: none; stroke-width: 4; }
-.scroll-road { stroke: var(--line); }
-.scroll-trail { stroke: var(--amber); }
+.scroll-road { fill: none; stroke-width: 4; stroke: var(--line); }
+/* The trail: a bar per straight and a turning half-ring per corner (see
+   TrailLeg), hidden until their animations reveal them. */
+.scroll-trail { position: absolute; top: 0; left: 0; }
+.scroll-trail div, .trail-half { position: absolute; }
+.trail-bar { background: var(--amber); scale: 0; }
+.trail-corner, .trail-rotor { transform-origin: 0 0; }
+.trail-quadrant { left: 0; top: 0; overflow: hidden; }
+.trail-rotor { left: 0; top: 0; rotate: -180deg; }
+.trail-half { top: 0; }
+.trail-half path { fill: none; stroke: var(--amber); stroke-width: 4; }
 .scroll-stop {
   fill: var(--page); stroke: var(--peach); stroke-width: 4;
   transition: fill 0.3s, stroke 0.3s;
