@@ -45,9 +45,8 @@ export const EXPERIENCES: Experience[] = [
     type: "organization",
     icon: "/images/logo/ristek.webp",
     responsibilities: [
-      "Led a team of 3 developers to build Bikun Tracker, a real-time campus bus tracker serving 1,400+ monthly active users",
-      "Optimized SEO to get Bikun Tracker to the #1 result on Google",
-      "Reviewed members' code and tasks across multiple projects to keep quality consistent and delivery on time",
+      "Led a team of 3 developers to deliver Bikun Tracker, coordinating closely with PMs and UI/UX designers through launch",
+      "Reviewed and provided feedback on members' code and tasks, ensuring consistency, code quality, and timely progress across multiple projects",
     ],
   },
   {
