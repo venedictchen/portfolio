@@ -229,9 +229,10 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   transition: fill 0.3s, stroke 0.3s;
 }
 .scroll-stop[data-lit] { fill: var(--amber); stroke: var(--amber); }
+/* Centred on its translate and turned about its centre, on its own layer. */
 .scroll-bus {
   position: absolute; top: 0; left: 0; width: 4.25rem;
-  offset-anchor: 50% 50%; offset-rotate: auto;
+  transform-origin: 0 0; transform: translate(-50%, -50%); will-change: transform;
 }
 .scroll-party * { opacity: 0; }
 .party-ring { fill: none; stroke: var(--amber); stroke-width: 3; }
@@ -242,7 +243,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;
 }
 .scroll-route[data-arrived] .party-twinkle { animation: party-twinkle 1.4s ease-in-out infinite both; }
-.scroll-route[data-arrived] .scroll-bus { animation: party-glow 1.6s ease-in-out infinite; }
+.scroll-route[data-arrived] .scroll-bus > svg { animation: party-glow 1.6s ease-in-out infinite; }
 @keyframes party-ring { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 4.5; } }
 @keyframes party-ray {
   from { opacity: 0; scale: 0.6; }
