@@ -48,7 +48,7 @@ export default function ProjectsSection() {
           />
         </article>
 
-        <ul className="mt-8 grid gap-8 md:grid-cols-3">
+        <ul className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
           {PROJECTS.map((project) => (
             <li
               key={project.title}

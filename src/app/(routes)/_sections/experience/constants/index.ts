@@ -107,4 +107,18 @@ export const EXPERIENCES: Experience[] = [
       "Contributed to three projects: an online account reporting system, a staff voting platform and an open recruitment website",
     ],
   },
+  {
+    id: 8,
+    company: "Open House Fasilkom UI",
+    position: "Frontend Developer",
+    duration: "Aug 2023 - Nov 2023",
+    location: "Depok, Indonesia",
+    type: "education",
+    icon: "/images/logo/openhouse-fasilkom.png",
+    responsibilities: [
+      "Collaborated with a team of 8+ students to develop the Open House Fasilkom UI 2023 website, enabling 900+ participants to register, explore information, and purchase merchandise",
+      "Dedicated 4+ months to development, ensuring timely delivery of a fully functional platform for the event",
+      "Managed technical operations of live coding events, providing a seamless experience for hundreds of participants",
+    ],
+  }
 ];

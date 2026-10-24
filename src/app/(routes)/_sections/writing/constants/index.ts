@@ -8,7 +8,7 @@ export const ARTICLES = [
   {
     title: "Flexible Authentication with Factory & Strategy Patterns in JavaScript",
     description:
-      "Building authentication logic in JavaScript that&apos;s easy to extend, using two classic design patterns.",
+      "Building authentication logic in JavaScript that&s easy to extend, using two classic design patterns.",
     url: "https://medium.com/@venedictchen/flexible-authentication-with-factory-strategy-patterns-in-javascript-123bdb5bdce8",
   },
   {

@@ -53,7 +53,7 @@ export function useContactForm() {
 
       setSubmitState({ isSubmitting: false, status: "success" });
 
-      toast.success("Message sent. I&apos;l reply by email.", {
+      toast.success("Message sent. I'll reply by email.", {
         style: {
           background: "#8dcd25", 
           color: "#471b1c",  
