@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { PUBLIC_KEY, SERVICE_ID, TEMPLATE_ID } from "../constants";
 
-const SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? "";
-const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? "";
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? "";
 
 export function useContactForm() {
   const [formData, setFormData] = useState({
@@ -43,10 +41,11 @@ export function useContactForm() {
         SERVICE_ID,
         TEMPLATE_ID,
         {
-          from_name: formData.name,
-          from_email: formData.email,
-          subject: formData.subject,
+          name: formData.name,
+          email: formData.email,
+          title: formData.subject,
           message: formData.message,
+          time: new Date().toLocaleString(),
         },
         PUBLIC_KEY
       );
