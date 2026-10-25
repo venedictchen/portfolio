@@ -1,4 +1,4 @@
-import { FADE, SLIDING, STICKY } from "../constants";
+import { FADE, FOLLOW, SLIDING, STICKY } from "../constants";
 import type { Frame, Leg, Route } from "../types";
 import { slides } from "./keyframes";
 
@@ -30,7 +30,10 @@ export function animations(route: Route) {
     const frames = whole.map(([at, value]) => `${((at / to) * 100).toFixed(6)}%{${value}}`);
     return (
       `@keyframes ${name}{${frames.join("")}}` +
-      `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`
+      (FOLLOW
+        ? // 1ms of the animation for each px of scroll, held still (see useRouteFollow).
+          `${selector}{animation:${name} ${to}ms linear both paused}`
+        : `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`)
     );
   };
   const drive = (frames: Frame[]) =>

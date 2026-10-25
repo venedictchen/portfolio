@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from "react";
-import { TIMELINE } from "../constants";
+import { PLACED } from "../constants";
 import type { Route } from "../types";
 import { reveal } from "../utils/animations";
 import { along, pin, place, showing } from "../utils/fallback";
@@ -28,7 +28,7 @@ export function useRouteProgress(ref: RefObject<HTMLElement | null>, route: Rout
       const y = window.scrollY;
       // No layout reads here: one would force style and layout mid-frame.
       const at = roadAt(route, y);
-      if (!TIMELINE) {
+      if (PLACED) {
         if (bus) place(bus, route.frames, y);
         if (stickyBus) {
           place(stickyBus, route.screen, y);
@@ -72,7 +72,7 @@ export function useRouteProgress(ref: RefObject<HTMLElement | null>, route: Rout
     // the page bus and trail glide to each new place (see globals.css) once
     // placed; the layout read lands this first place before gliding starts.
     overlay.getBoundingClientRect();
-    overlay.toggleAttribute("data-glide", !TIMELINE);
+    overlay.toggleAttribute("data-glide", PLACED);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("scrollend", onScroll);
     return () => {

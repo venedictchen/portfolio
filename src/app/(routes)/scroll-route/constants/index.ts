@@ -3,15 +3,19 @@ export const TABLET = "(min-width: 48rem)";
 export const TURN = 40;
 export const FRAME = 16; // matches the photo's rounded-2xl
 export const STEP = 4;
-// ?route=js, css or drive picks one of the paths below anyway, to compare.
+// ?route=js, css, drive or follow picks one of the paths below anyway, to compare.
 const PICK = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("route");
+// To try on iPhone: the bus and trail run the scroll timeline's keyframes as
+// a timed animation, kept up with the scroll by its speed alone (see
+// useRouteFollow), so it follows the scroll a little behind but smoothly.
+export const FOLLOW = PICK === "follow";
 // From the scroll handler, the bus shows a frame from a scroll position or
 // two back; on iOS even scroll timelines are drawn a little apart from the
 // scroll. On straights that run down the page the bus holds still on screen,
 // so there a second bus rides a sticky frame that the browser keeps in step
 // with the scroll, and a frame a little off barely moves it. Sticky needs
 // the route's clip to be overflow: clip, not a scroll container.
-export const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+export const STICKY = !FOLLOW && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
 // On iPhone and iPad even that leaves the bus shaking wherever it moves on
 // screen, so there it never follows the scroll by animation: it's held
 // still on screen along the long straights, natively, and drives by itself
@@ -27,6 +31,7 @@ export const DRIVE =
 // the page; without them it follows from the scroll handler, a frame late.
 export const TIMELINE =
   !DRIVE &&
+  !FOLLOW &&
   PICK !== "js" &&
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
@@ -36,6 +41,8 @@ export const TIMELINE =
 // with scroll timelines they slide in a sticky frame like the bus's (see
 // slides).
 export const PINNED = !TIMELINE && !DRIVE && STICKY;
+// The bus and trail placed from the scroll handler.
+export const PLACED = !TIMELINE && !DRIVE && !FOLLOW;
 export const SLIDING = TIMELINE && STICKY;
 // How far a sliding leg's bar runs past either end of the leg.
 export const SLACK = 1000;

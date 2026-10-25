@@ -2,10 +2,10 @@
 
 import { useRef } from "react";
 import { Bus } from "@/components";
-import { PINNED, SLIDING, STICKY, TIMELINE } from "./constants";
+import { FOLLOW, PINNED, SLIDING, STICKY, TIMELINE } from "./constants";
 import { Celebration } from "./elements/celebration";
 import { TrailLeg } from "./elements/trail-leg";
-import { useRoute, useRouteDrive, useRouteProgress } from "./hooks";
+import { useRoute, useRouteDrive, useRouteFollow, useRouteProgress } from "./hooks";
 import type { Ride } from "./types";
 import { animations } from "./utils/animations";
 
@@ -30,6 +30,7 @@ export default function ScrollRoute() {
   const route = useRoute(ref);
   useRouteProgress(ref, route);
   useRouteDrive(ref, route);
+  useRouteFollow(ref, route);
   const plan = route?.drive;
 
   return (
@@ -101,7 +102,7 @@ export default function ScrollRoute() {
               )}
             </>
           )}
-          {TIMELINE && <style>{animations(route)}</style>}
+          {(TIMELINE || FOLLOW) && <style>{animations(route)}</style>}
         </>
       )}
     </div>
