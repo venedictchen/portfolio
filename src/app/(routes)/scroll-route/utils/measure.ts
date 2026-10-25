@@ -1,8 +1,8 @@
-import { AIM, BOTTOM, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
+import { AIM, BOTTOM, EASE, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
 import type { Mode, Point, Route, Stop } from "../types";
 import { inFrame, keyframes, reveals, steadyLegs } from "./keyframes";
 import { trace } from "./road";
-import { timetable } from "./timetable";
+import { ease, timetable } from "./timetable";
 
 // Mobile toolbars change innerHeight as they slide in and out on scroll; the
 // small (toolbars shown) and large (hidden) viewports stay put.
@@ -163,13 +163,17 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     y,
   });
   const clearance = mode === "phone" ? contentLeft - endX : endX - contentRight;
-  const scroll = timetable(
-    ys.map((y) => y + toPage),
-    paces,
-    ramps,
-    land,
-    view,
-    last
+  const scroll = ease(
+    timetable(
+      ys.map((y) => y + toPage),
+      paces,
+      ramps,
+      land,
+      view,
+      last
+    ),
+    roads,
+    EASE
   );
   const stuck = Math.max(scroll.at(-1)! - toPage, 0);
   const frames = keyframes(scroll, xs, ys, turns);

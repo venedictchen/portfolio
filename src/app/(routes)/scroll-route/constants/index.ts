@@ -30,6 +30,8 @@ export const SLACK = 1000;
 
 // Bus position on screen, as fractions of the viewport height.
 export const [TOP, AIM, BOTTOM] = [0.1, 0.6, 0.9];
+// px of scroll either side over which the bus eases from one speed to the next.
+export const EASE = 60;
 
 export const RAYS = Array.from({ length: 12 }, (_, i) => i * 30);
 // [angle in degrees, distance, delay in seconds]

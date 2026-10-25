@@ -37,3 +37,40 @@ export function timetable(
   });
   return scroll;
 }
+
+// Eases the bus between stretches of different speed, which otherwise change
+// in a step and read as a jolt: the road as a function of scroll, averaged
+// over `spread` px of scroll either side, twice, so the speed ramps instead.
+// The road's ends stay put, so the bus still arrives as the page runs out.
+// roads: road at each sample.
+export function ease(scroll: number[], roads: number[], spread: number) {
+  const GRID = 2;
+  const end = scroll.at(-1)!;
+  const n = Math.ceil(end / GRID);
+  const road: number[] = [];
+  for (let k = 0, j = 0; k <= n; k++) {
+    const at = Math.min(k * GRID, end);
+    while (j + 2 < scroll.length && scroll[j + 1] <= at) j++;
+    const t = scroll[j + 1] > scroll[j] ? (at - scroll[j]) / (scroll[j + 1] - scroll[j]) : 0;
+    road.push(roads[j] + Math.min(Math.max(t, 0), 1) * (roads[j + 1] - roads[j]));
+  }
+  // Each point averaged with its neighbours up to w either side, fewer by
+  // the ends so they keep their value.
+  const average = (v: number[], w: number) => {
+    const sums = [0];
+    for (const x of v) sums.push(sums.at(-1)! + x);
+    return v.map((_, k) => {
+      const r = Math.min(w, k, v.length - 1 - k);
+      return (sums[k + r + 1] - sums[k - r]) / (2 * r + 1);
+    });
+  };
+  const w = Math.round(spread / GRID);
+  const eased = average(average(road, w), w);
+  return roads.map((at, i) => {
+    if (i === roads.length - 1) return end;
+    let k = 0;
+    for (let step = 1 << 15; step; step >>= 1) if (k + step < n && eased[k + step] < at) k += step;
+    const t = eased[k + 1] > eased[k] ? (at - eased[k]) / (eased[k + 1] - eased[k]) : 0;
+    return Math.round(Math.min((k + t) * GRID, end) * 100) / 100;
+  });
+}
