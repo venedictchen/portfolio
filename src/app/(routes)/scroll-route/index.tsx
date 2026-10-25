@@ -63,6 +63,7 @@ type Route = {
   stuck: number; // how far the sticky frame rides down the route
   screen: Frame[]; // the bus's keyframes in the sticky frame
   shown: [scroll: number, screen: number][]; // from where each bus shows (1: the sticky one)
+  steady: boolean[]; // legs the sticky bus rides
   trail: Step[][]; // each leg's keyframes
   years: number[];
   jobs: Stop[];
@@ -277,6 +278,24 @@ function reveals(legs: Leg[], roads: number[], scroll: number[]) {
   });
 }
 
+// Legs down the page along which the bus all but holds still on screen
+// (screenY: its place on screen at each sample), for long enough to be worth
+// riding the sticky frame. Where the route turns quickly (the hero, the photo
+// lap) the bus moves on screen, and swapping between a late page bus and the
+// sticky one would jump by however late it is.
+function steadyLegs(legs: Leg[], roads: number[], scroll: number[], screenY: number[]) {
+  return legs.map((leg) => {
+    if (leg.r || leg.dx) return false;
+    let [moved, span] = [0, 0];
+    for (let k = 1; k < roads.length; k++) {
+      if (roads[k - 1] < leg.s || roads[k] > leg.s + leg.length) continue;
+      moved += Math.abs(screenY[k] - screenY[k - 1]);
+      span += scroll[k] - scroll[k - 1];
+    }
+    return span >= 120 && moved <= 0.3 * span;
+  });
+}
+
 // Mobile toolbars change innerHeight as they slide in and out on scroll; the
 // small (toolbars shown) and large (hidden) viewports stay put.
 function viewports(overlay: HTMLElement) {
@@ -442,11 +461,16 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   // The sticky frame rides from the top of the route to where the bus arrives.
   const stuck = Math.max(scroll[scroll.length - 1] - toPage, 0);
   const frames = keyframes(scroll, xs, ys, turns);
-  // The sticky bus shows on legs running up or down the page, the other on
-  // the rest, swapping halfway round each corner.
+  const steady = steadyLegs(legs, roads, scroll, ys.map((y, i) => y + toPage - scroll[i]));
+  // The sticky bus shows along steady legs, swapping halfway round the
+  // corners either side; the page bus drives everywhere else.
   const shown: [number, number][] = [];
+  let leg = 0;
   turns.forEach((heading, i) => {
-    const sticky = Number(Math.abs(Math.sin((heading * Math.PI) / 180)) > Math.SQRT1_2);
+    while (leg + 1 < legs.length && legs[leg + 1].s <= roads[i]) leg++;
+    const upright = Math.abs(Math.sin((heading * Math.PI) / 180)) > Math.SQRT1_2;
+    const straight = legs[leg].r ? [leg - 1, leg + 1].find((k) => legs[k] && !legs[k].r && !legs[k].dx) : leg;
+    const sticky = Number(upright && straight !== undefined && steady[straight]);
     if (shown[shown.length - 1]?.[1] !== sticky) shown.push([scroll[i], sticky]);
   });
 
@@ -465,6 +489,7 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     stuck,
     screen: inFrame(frames, toPage, stuck),
     shown,
+    steady,
     trail: reveals(legs, roads, scroll),
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
@@ -529,9 +554,9 @@ function showing(shown: Route["shown"], y: number) {
 // corner after; for a corner, a half-ring (stroked like the road, so they
 // line up) turning about the corner's centre inside its quarter, in a frame
 // turned (and mirrored) so the corner runs clockwise from 0°.
-function TrailLeg({ leg, index }: { leg: Leg; index: number }) {
+function TrailLeg({ leg, index, pinned }: { leg: Leg; index: number; pinned: boolean }) {
   const { x, y, dx, dy, r, nx, ny, length } = leg;
-  if (!r && !dx && PINNED) {
+  if (pinned) {
     // A leg up or down the page, pinned: a bar as long as the leg slides in
     // a sticky track twice as long, clipped to the leg, so the sticky offset
     // (see pin) puts its leading end on the bus.
@@ -696,14 +721,27 @@ export default function ScrollRoute() {
       route.jobs.forEach((job, i) => jobs[i]?.toggleAttribute("data-reached", at >= job.at - route.lead));
       overlay.toggleAttribute("data-arrived", at >= length - 1);
     };
+    // Once scrolling stops, update from where it came to rest, in case the
+    // last scroll event came before the last of the momentum.
+    let rest = 0;
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
+      clearTimeout(rest);
+      rest = window.setTimeout(update, 150);
     };
     update();
+    // From the scroll handler, which Safari runs at most 60 times a second,
+    // the page bus and trail glide to each new place (see globals.css) once
+    // placed; the layout read lands this first place before gliding starts.
+    overlay.getBoundingClientRect();
+    overlay.toggleAttribute("data-glide", !TIMELINE);
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", onScroll);
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(rest);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", onScroll);
     };
   }, [route]);
 
@@ -720,7 +758,9 @@ export default function ScrollRoute() {
           </svg>
           {/* Over the stops, but it only reaches each as it lights up amber too. */}
           <div className="scroll-trail">
-            {route.legs.map((leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} />)}
+            {route.legs.map(
+              (leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} pinned={PINNED && route.steady[i]} />
+            )}
           </div>
           <div className="scroll-bus" data-frame="page">
             <div className="bus-face">

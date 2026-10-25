@@ -255,6 +255,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 .party-ring { fill: none; stroke: var(--amber); stroke-width: 3; }
 .party-ray { stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
 .party-twinkle { fill: var(--amber); transform-box: fill-box; transform-origin: center; }
+/* Set from script a frame at a time (data-glide), the page bus and the
+   trail's bars and corners glide between frames on the compositor, which
+   runs at the screen's rate; the sticky bus and pinned legs stay exact. */
+.scroll-route[data-glide] .scroll-bus[data-frame="page"] { transition: translate 40ms linear, rotate 40ms linear; }
+.scroll-route[data-glide] .trail-bar { transition: scale 40ms linear; }
+.scroll-route[data-glide] .trail-rotor { transition: rotate 40ms linear; }
 .scroll-route[data-arrived] .party-ring { animation: party-ring 2s ease-out infinite; }
 .scroll-route[data-arrived] .party-ray {
   animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;
