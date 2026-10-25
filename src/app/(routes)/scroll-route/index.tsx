@@ -26,11 +26,7 @@ const TIMELINE =
 // screen, so there a second bus rides a sticky frame that the browser keeps
 // in step with the scroll, and a stale frame barely moves it. Sticky needs
 // the route's clip to be overflow: clip, not a scroll container.
-// Other iPhone browsers (Chrome, Firefox, Edge…) slide their address bar at
-// the top, which moves where sticky elements stick against the page, so a
-// sticky bus would jump as the bar shows and hides; they get none.
-const TOP_BAR = APPLE && /\b(CriOS|FxiOS|EdgiOS|OPiOS|GSA)\//.test(navigator.userAgent);
-const STICKY = !TOP_BAR && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
 // Without scroll timelines the trail is drawn from the scroll handler too,
 // a frame behind that bus; there the trail's legs running down the page
 // stick to it the same way, so their tips keep up with it.
@@ -375,6 +371,9 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   let projectsOn: [number, number];
   let writingOn: [number, number];
 
+  // From the scroll handler (iPhone), at a phone's pace the lap round the photo
+  // shows as lag, so there the bus crosses above it and runs straight down.
+  const skipLap = mode === "phone" && !TIMELINE;
   if (mode === "phone") {
     // Anticlockwise round the photo, so it leaves towards the rail.
     const lastYear = Math.max(
@@ -386,18 +385,20 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     );
     const turnX = (lastYear + viewRight) / 2;
     endX = leftX;
-    points = [
-      corner(startX, lineY),
-      corner(turnX, lineY, 20),
-      corner(turnX, aboveY),
-      corner(photo.left, aboveY, TURN, lap),
-      corner(photo.left, photo.bottom, FRAME, lap),
-      corner(photo.right, photo.bottom, FRAME, lap),
-      corner(photo.right, photo.top, FRAME, lap),
-      corner(leftX, photo.top),
-      corner(leftX, end),
-    ];
-    jobsOn = projectsOn = writingOn = [7, leftX];
+    points = skipLap
+      ? [corner(startX, lineY), corner(turnX, lineY, 20), corner(turnX, aboveY), corner(leftX, aboveY), corner(leftX, end)]
+      : [
+          corner(startX, lineY),
+          corner(turnX, lineY, 20),
+          corner(turnX, aboveY),
+          corner(photo.left, aboveY, TURN, lap),
+          corner(photo.left, photo.bottom, FRAME, lap),
+          corner(photo.right, photo.bottom, FRAME, lap),
+          corner(photo.right, photo.top, FRAME, lap),
+          corner(leftX, photo.top),
+          corner(leftX, end),
+        ];
+    jobsOn = projectsOn = writingOn = [skipLap ? 3 : 7, leftX];
   } else {
     const besideX = (photo.right + aboutText.left) / 2;
     const timelineX = (date.right + details.left) / 2;
@@ -435,14 +436,31 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   const [view, large] = viewports(overlay);
   const last = document.documentElement.scrollHeight - large - 1;
   const sampleAt = (s: number) => Math.round(s / STEP);
-  const photoHeight = photo.bottom - photo.top;
-  const share = photoHeight / (runs[7].s - runs[3].s);
-  const room = (BOTTOM - TOP) * view - photoHeight;
-  const lapScroll = Math.max((0.9 * room) / (1 - share), 60);
-  const lapStart = photo.top + toPage - TOP * view - lapScroll - 10;
-  // Where the final run down enters the Contact section.
+  // The hero line from when the bus first shows on screen (on a phone it
+  // starts below the fold), so it doesn't dash to catch up.
+  const shows = { end: 1, to: Math.max(lineY + toPage - BOTTOM * view, 0) };
+  const hero = { end: sampleAt(runs[1].s), to: lineY + toPage - AIM * view };
+  let ramps: { end: number; to: number }[];
+  if (skipLap) {
+    // Across above the photo no faster than the lap's approach (2.3x), then
+    // onto AIM over the first 2.5 screens down, below the top of the screen.
+    const rail = runs[3];
+    const across = Math.min(hero.to + (rail.s - runs[1].s) / 2.3, rail.y + toPage - TOP * view);
+    const settle = 2.5 * view;
+    ramps = [shows, hero, { end: sampleAt(rail.s), to: across }, { end: sampleAt(rail.s + settle), to: rail.y + settle + toPage - AIM * view }];
+  } else {
+    const photoHeight = photo.bottom - photo.top;
+    const share = photoHeight / (runs[7].s - runs[3].s);
+    const room = (BOTTOM - TOP) * view - photoHeight;
+    const lapScroll = Math.max((0.9 * room) / (1 - share), 60);
+    const lapStart = photo.top + toPage - TOP * view - lapScroll - 10;
+    ramps = [shows, hero, { end: sampleAt(runs[3].s), to: lapStart }, { end: sampleAt(runs[7].s), to: lapStart + lapScroll }];
+  }
+  // Where the bus starts easing down the screen to where it ends: on the
+  // last run, far enough back that it drifts at most 0.05 px per px scrolled.
+  const drift = 20 * Math.abs(end + toPage - last - AIM * view);
   const lastRun = sampleAt(runs[runs.length - 1].s);
-  const land = ys.findIndex((y, i) => i >= lastRun && y >= contact.top);
+  const land = ys.findIndex((y, i) => i >= lastRun && y + toPage - AIM * view >= last - drift);
 
   const on = ([run, x]: [number, number], y: number): Stop => ({
     at: runs[run].s + Math.abs(x - runs[run].x) + Math.abs(y - runs[run].y),
@@ -453,11 +471,7 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   const scroll = timetable(
     ys.map((y) => y + toPage),
     paces,
-    [
-      { end: sampleAt(runs[1].s), to: lineY + toPage - AIM * view },
-      { end: sampleAt(runs[3].s), to: lapStart },
-      { end: sampleAt(runs[7].s), to: lapStart + lapScroll },
-    ],
+    ramps,
     land,
     view,
     last
@@ -666,25 +680,7 @@ export default function ScrollRoute() {
     observer.observe(document.body);
     desktop.addEventListener("change", remeasure);
     tablet.addEventListener("change", remeasure);
-    // How often this browser runs page updates (Safari: 60 a second, even on
-    // 120 Hz screens): the glide spans about two of them, enough to bridge
-    // each gap without trailing further behind than it must. Sampled once
-    // the page has settled after loading; until then it glides 40 ms.
-    let sample = 0;
-    const times: number[] = [];
-    const tick = (t: number) => {
-      times.push(t);
-      if (times.length < 12) sample = requestAnimationFrame(tick);
-      else {
-        const gaps = times.slice(1).map((time, i) => time - times[i]).sort((a, b) => a - b);
-        const glide = Math.min(Math.max(2 * gaps[gaps.length >> 1], 12), 40);
-        overlay.style.setProperty("--glide", `${Math.round(glide)}ms`);
-      }
-    };
-    const settled = TIMELINE ? 0 : window.setTimeout(() => (sample = requestAnimationFrame(tick)), 1500);
     return () => {
-      clearTimeout(settled);
-      cancelAnimationFrame(sample);
       observer.disconnect();
       desktop.removeEventListener("change", remeasure);
       tablet.removeEventListener("change", remeasure);
