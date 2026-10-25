@@ -276,6 +276,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 .scroll-route[data-glide] .scroll-bus[data-frame="page"] { transition: translate 40ms linear, rotate 40ms linear; }
 .scroll-route[data-glide] .trail-bar { transition: scale 40ms linear; }
 .scroll-route[data-glide] .trail-rotor { transition: rotate 40ms linear; }
+.scroll-route[data-left] :is(.scroll-party, .bus-glow) { visibility: hidden; }
 .scroll-route[data-arrived] .party-ring { animation: party-ring 2s ease-out infinite; }
 .scroll-route[data-arrived] .party-ray {
   animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;

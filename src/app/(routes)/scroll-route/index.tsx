@@ -691,7 +691,7 @@ export default function ScrollRoute() {
     const { roads, scroll, length } = route;
     const drawn: number[] = [];
     let frame = 0;
-    const update = () => {
+    const update = (resting = false) => {
       frame = 0;
       const y = window.scrollY;
       let at = length;
@@ -729,15 +729,20 @@ export default function ScrollRoute() {
       route.years.forEach((year, i) => years[i]?.toggleAttribute("data-lit", at >= year));
       [...route.jobs, ...route.stops].forEach((stop, i) => pins[i]?.toggleAttribute("data-lit", at >= stop.at));
       route.jobs.forEach((job, i) => jobs[i]?.toggleAttribute("data-reached", at >= job.at - route.lead));
-      overlay.toggleAttribute("data-arrived", at >= length - 1);
+      // Arriving starts the celebration; leaving only hides it (data-left)
+      // until scrolling comes to rest, as stopping its animations mid-scroll
+      // can hitch.
+      const here = at >= length - 1;
+      if (here || (resting && overlay.hasAttribute("data-arrived"))) overlay.toggleAttribute("data-arrived", here);
+      overlay.toggleAttribute("data-left", !here && overlay.hasAttribute("data-arrived"));
     };
     // Once scrolling stops, update from where it came to rest, in case the
     // last scroll event came before the last of the momentum.
     let rest = 0;
     const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
+      if (!frame) frame = requestAnimationFrame(() => update());
       clearTimeout(rest);
-      rest = window.setTimeout(update, 150);
+      rest = window.setTimeout(() => update(true), 150);
     };
     update();
     // From the scroll handler, which Safari runs at most 60 times a second,
