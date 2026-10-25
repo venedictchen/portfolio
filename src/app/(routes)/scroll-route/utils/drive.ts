@@ -22,10 +22,11 @@ type Course = {
   top: number; // where the route starts on the page
   last: number; // the furthest the page is sure to scroll
   length: number;
+  scrolled?: { to: number; end: number }; // mixed mode: the road up to `to` follows the scroll until `end`
 };
 
 // The bus's place at road p.
-function pose({ roads, xs, ys, headings }: Course, p: number): Pose {
+export function pose({ roads, xs, ys, headings }: Pick<Course, "roads" | "xs" | "ys" | "headings">, p: number): Pose {
   let i = 0;
   for (let step = 1 << 15; step; step >>= 1) if (i + step < roads.length && roads[i + step] <= p) i += step;
   const j = Math.min(i + 1, roads.length - 1);
@@ -57,10 +58,11 @@ function layout(c: Course) {
   const lastHold = last - 0.05 * view - wait;
   const stretches: Stretch[] = [];
   const holds: Hold[] = [];
-  let from = 0;
-  let earliest = 2 * HYSTERESIS;
-  let [high, low] = [ys[0], ys[0]];
-  let next = 0;
+  // In mixed mode the drives start where the hero line, following the scroll, ends.
+  let from = c.scrolled?.to ?? 0;
+  let earliest = c.scrolled ? c.scrolled.end + HYSTERESIS : 2 * HYSTERESIS;
+  let next = Math.max(roads.findIndex((at) => at >= from), 0);
+  let [high, low] = [pose(c, from)[1], pose(c, from)[1]];
   // Takes the road up to `to` into the drive being laid out.
   const reach = (to: number) => {
     for (; next < roads.length && roads[next] <= to; next++) [high, low] = [Math.min(high, ys[next]), Math.max(low, ys[next])];
@@ -105,7 +107,7 @@ function layout(c: Course) {
   };
 
   for (const leg of c.legs) {
-    if (leg.length <= 0) continue;
+    if (leg.length <= 0 || leg.s + leg.length <= from + 0.01) continue;
     if (from < c.lap[0] && leg.s >= c.lap[0] - 0.01) {
       reach(leg.s);
       cut(leg.s, due());
@@ -118,8 +120,9 @@ function layout(c: Course) {
   return { stretches, holds };
 }
 
-// The trail's pieces: each leg, split where holds start and end.
-function split(legs: Leg[], stretches: Stretch[], holds: Hold[]) {
+// The trail's pieces: each leg, split where holds start and end. Pieces up
+// to `scrolled` (mixed mode) or along no stretch (glide mode) belong to no drive.
+export function split(legs: Leg[], stretches: { to: number }[], holds: Hold[], scrolled = 0) {
   const pieces: Piece[] = [];
   for (const leg of legs) {
     if (leg.length <= 0) continue;
@@ -130,6 +133,7 @@ function split(legs: Leg[], stretches: Stretch[], holds: Hold[]) {
       const [a, b] = [cuts[k], cuts[k + 1]];
       const hold = holds.findIndex((h) => a >= h.from - 0.01 && b <= h.to + 0.01);
       if (hold >= 0) pieces.push({ leg: part(leg, a - leg.s, b - leg.s), hold });
+      else if (b <= scrolled + 0.01 || !stretches.length) pieces.push({ leg: part(leg, a - leg.s, b - leg.s) });
       else pieces.push({ leg: part(leg, a - leg.s, b - leg.s), drive: stretches.findIndex((d) => (a + b) / 2 < d.to) });
     }
   }
@@ -171,7 +175,7 @@ function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
 
 export function plan(c: Course): Plan {
   const { stretches, holds } = layout(c);
-  const pieces = split(c.legs, stretches, holds);
+  const pieces = split(c.legs, stretches, holds, c.scrolled?.to);
   const drives = stretches.map((d, i) => drive(c, d, i, pieces));
-  return { screen: AIM * c.view, view: c.view, drives, holds, pieces };
+  return { kind: "drive", screen: AIM * c.view, view: c.view, drives, holds, pieces, scrolled: c.scrolled };
 }

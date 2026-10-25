@@ -2,6 +2,7 @@ import { useEffect, type RefObject } from "react";
 import type { Pose, Route } from "../types";
 import { reveal } from "../utils/animations";
 import { ease } from "../utils/drive";
+import { roadAt } from "../utils/road";
 
 // Drive mode (iPhone and iPad): nothing about the bus follows the scroll by
 // animation, which WebKit draws a little apart from the page. Along a hold
@@ -16,7 +17,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     const overlay = ref.current;
     const plan = route?.drive;
     const bus = overlay?.querySelector<HTMLElement>('.scroll-bus[data-frame="drive"]');
-    if (!route || !overlay || !plan || !bus) return;
+    if (!route || !overlay || plan?.kind !== "drive" || !bus) return;
     const { drives, holds, pieces, screen, view } = plan;
     const held = holds.map((_, k) => overlay.querySelector<HTMLElement>(`[data-hold="${k}"]`)!);
     const trail = new Map(Array.from(overlay.querySelectorAll<HTMLElement>("[data-leg]"), (el) => [Number(el.dataset.leg), el]));
@@ -126,7 +127,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
         return y - (k === undefined ? (drives[i + 1]?.forward ?? Infinity) : holds[k].start);
       }
       const k = before(i);
-      return (k === undefined ? (drives[i - 1]?.back ?? -Infinity) : holds[k].end) - y;
+      return (k === undefined ? (drives[i - 1]?.back ?? plan.scrolled?.end ?? -Infinity) : holds[k].end) - y;
     };
     // The further behind, the faster it drives (up to 6 times), so the bus
     // catches up without ever jumping.
@@ -184,6 +185,8 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       }
       const k = held.indexOf(shown!);
       if (k >= 0) return holds[k].from + Math.min(Math.max(y - holds[k].start, 0), holds[k].to - holds[k].from);
+      // Mixed mode: on the hero line it follows the scroll.
+      if (!done && plan.scrolled && y < plan.scrolled.end) return roadAt(route, y);
       return done ? drives[done - 1].to : drives[0].from;
     };
     const light = (at: number, resting: boolean) => {

@@ -1,6 +1,7 @@
-import { AIM, BOTTOM, DRIVE, EASE, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
-import type { Mode, Point, Route, Stop } from "../types";
+import { AIM, BOTTOM, DRIVE, EASE, FRAME, HELD, MIXED, SLIDING, STEP, TOP, TURN } from "../constants";
+import type { Mode, Plan, Point, Route, Stop } from "../types";
 import { plan } from "./drive";
+import { glide } from "./glide";
 import { inFrame, keyframes, reveals, steadyLegs } from "./keyframes";
 import { trace } from "./road";
 import { ease, timetable } from "./timetable";
@@ -210,6 +211,14 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     });
   }
 
+  // Drive mode's plan (mixed mode: the hero line still follows the scroll), or glide mode's.
+  const course = { legs, roads, xs, ys, headings: turns, view, top: toPage };
+  let drive: Plan | undefined;
+  if (DRIVE) {
+    const scrolled = MIXED ? { to: legs[0].s + legs[0].length, end: trail[0].at(-1)![0] } : undefined;
+    drive = plan({ ...course, lap: [runs[3].s, runs[7].s], last, length, scrolled });
+  } else if (HELD) drive = glide({ ...course, steady, scroll });
+
   return {
     height: end + 60,
     lead: mode === "phone" ? 0.25 * view : 0,
@@ -230,8 +239,6 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
     stops: [on(projectsOn, projectsH2.midY), on(writingOn, writingH2.midY), { at: length, x: endX, y: end }],
-    drive: DRIVE
-      ? plan({ legs, roads, xs, ys, headings: turns, lap: [runs[3].s, runs[7].s], view, top: toPage, last, length })
-      : undefined,
+    drive,
   };
 }
