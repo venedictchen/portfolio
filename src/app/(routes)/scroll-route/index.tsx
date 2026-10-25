@@ -10,9 +10,14 @@ const TURN = 40;
 const FRAME = 16; // matches the photo's rounded-2xl
 const STEP = 4;
 // Scroll-driven CSS animations move the bus on the compositor, in step with
-// the page; without them it follows from the scroll handler, which on phones
-// lands a frame late and shakes.
+// the page; without them it follows from the scroll handler, a frame late.
+// Apple's engine (Safari, and every browser on iPhone) runs them threaded
+// only since 26.4, and on this route that flashes stale frames and trail
+// legs, so there the route follows from the scroll handler too: a late frame
+// lags but never flashes.
+const APPLE = typeof navigator !== "undefined" && /^Apple/.test(navigator.vendor);
 const TIMELINE =
+  !APPLE &&
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
