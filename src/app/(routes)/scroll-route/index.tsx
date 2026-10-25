@@ -19,17 +19,20 @@ const TIMELINE =
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
 // From the scroll handler, the bus shows a frame from a scroll position or
-// two back. On straights that run down the page it holds still on screen,
+// two back; on iOS even scroll timelines are drawn a little apart from the
+// scroll. On straights that run down the page the bus holds still on screen,
 // so there a second bus rides a sticky frame that the browser keeps in step
-// with the scroll, and a stale frame barely moves it. (Not with scroll
-// timelines: they keep the bus and trail together, where Safari can draw a
-// sticky frame a moment behind them.) Sticky needs the route's clip to be
-// overflow: clip, not a scroll container.
-const STICKY = !TIMELINE && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
-// Without scroll timelines the trail is drawn from the scroll handler too,
-// a frame behind that bus; there the trail's legs running down the page
-// stick to it the same way, so their tips keep up with it.
+// with the scroll, and a frame a little off barely moves it. Sticky needs
+// the route's clip to be overflow: clip, not a scroll container.
+const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+// The trail's legs along those straights ride with it the same way, so
+// their tips stay on it: from the scroll handler they're pinned (see pin),
+// with scroll timelines they slide in a sticky frame like the bus's (see
+// slides).
 const PINNED = !TIMELINE && STICKY;
+const SLIDING = TIMELINE && STICKY;
+// How far a sliding leg's bar runs past either end of the leg.
+const SLACK = 1000;
 
 // pace: minimum scroll per px of road to the next point
 type Point = { x: number; y: number; r: number; pace?: number };
@@ -277,6 +280,27 @@ function reveals(legs: Leg[], roads: number[], scroll: number[]) {
   });
 }
 
+// A sliding leg's keyframes: where its bar's leading end sits in the sticky
+// frame, which rides with the scroll from `top` for `stuck` px. On the leg
+// it's on the bus, in that frame too, so the two are drawn together; off it
+// it holds SLACK clear of the leg, so a frame drawn a little apart from the
+// scroll still shows all of the leg or none.
+function slides(leg: Leg, steps: Step[], top: number, stuck: number) {
+  const ride = (at: number) => Math.min(Math.max(at - top, 0), stuck);
+  const [from, to, end] = [steps[0][0], steps[steps.length - 1][0], top + stuck];
+  const tips: Step[] = [
+    [0, -SLACK],
+    [top, -SLACK],
+    [from - 0.01, -SLACK],
+    ...steps,
+    // Unless the road ends with it, and the bus stays on its end.
+    ...(to < end ? [[to + 0.01, leg.length + 1 + SLACK] as Step, [end, leg.length + 1 + SLACK] as Step] : []),
+  ];
+  return tips
+    .filter(([at], i) => at >= 0 && tips.slice(0, i).every(([before]) => before < at))
+    .map(([at, u]): Step => [at, Math.round((leg.y + u - ride(at)) * 100) / 100]);
+}
+
 // Legs down the page along which the bus all but holds still on screen
 // (screenY: its place on screen at each sample), for long enough to be worth
 // riding the sticky frame. Where the route turns quickly (the hero, the photo
@@ -466,17 +490,29 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   const stuck = Math.max(scroll[scroll.length - 1] - toPage, 0);
   const frames = keyframes(scroll, xs, ys, turns);
   const steady = steadyLegs(legs, roads, scroll, ys.map((y, i) => y + toPage - scroll[i]));
+  const trail = reveals(legs, roads, scroll);
   // The sticky bus shows along steady legs, swapping halfway round the
-  // corners either side; the page bus drives everywhere else.
-  const shown: [number, number][] = [];
-  let leg = 0;
-  turns.forEach((heading, i) => {
-    while (leg + 1 < legs.length && legs[leg + 1].s <= roads[i]) leg++;
-    const upright = Math.abs(Math.sin((heading * Math.PI) / 180)) > Math.SQRT1_2;
-    const straight = legs[leg].r ? [leg - 1, leg + 1].find((k) => legs[k] && !legs[k].r && !legs[k].dx) : leg;
-    const sticky = Number(upright && straight !== undefined && steady[straight]);
-    if (shown[shown.length - 1]?.[1] !== sticky) shown.push([scroll[i], sticky]);
-  });
+  // corners either side; the page bus drives everywhere else. With scroll
+  // timelines, which can draw the two buses a little apart, they swap where
+  // the legs start and end instead, as their trail does (see slides).
+  const shown: [number, number][] = [[scroll[0], 0]];
+  if (SLIDING) {
+    legs.forEach((_, i) => {
+      if (!steady[i]) return;
+      const steps = trail[i];
+      shown.push([steps[0][0], 1]);
+      if (steps[steps.length - 1][0] < scroll[scroll.length - 1]) shown.push([steps[steps.length - 1][0], 0]);
+    });
+  } else {
+    let leg = 0;
+    turns.forEach((heading, i) => {
+      while (leg + 1 < legs.length && legs[leg + 1].s <= roads[i]) leg++;
+      const upright = Math.abs(Math.sin((heading * Math.PI) / 180)) > Math.SQRT1_2;
+      const straight = legs[leg].r ? [leg - 1, leg + 1].find((k) => legs[k] && !legs[k].r && !legs[k].dx) : leg;
+      const sticky = Number(upright && straight !== undefined && steady[straight]);
+      if (shown[shown.length - 1][1] !== sticky) shown.push([scroll[i], sticky]);
+    });
+  }
 
   return {
     height: end + 60,
@@ -494,7 +530,7 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     screen: inFrame(frames, toPage, stuck),
     shown,
     steady,
-    trail: reveals(legs, roads, scroll),
+    trail,
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
     stops: [on(projectsOn, projectsH2.midY), on(writingOn, writingH2.midY), { at: length, x: endX, y: end }],
@@ -525,7 +561,8 @@ function animations(route: Route) {
     ];
     const to = whole[whole.length - 1][0];
     if (to <= 0) return "";
-    const frames = whole.map(([at, value]) => `${((at / to) * 100).toFixed(4)}%{${value}}`);
+    // Fine enough to keep steps 0.01px of scroll apart on the longest page.
+    const frames = whole.map(([at, value]) => `${((at / to) * 100).toFixed(6)}%{${value}}`);
     return (
       `@keyframes ${name}{${frames.join("")}}` +
       `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`
@@ -548,9 +585,14 @@ function animations(route: Route) {
       css += rule(`bus-face-${frame}`, `[data-frame="${frame}"] > .bus-face`, steps);
     }
   }
-  const legs = route.legs.map((leg, i) =>
-    leg.length > 0 ? rule(`trail-${i}`, `[data-leg="${i}"]`, route.trail[i].map(([at, u]) => [at, reveal(leg, u).join(":")])) : ""
-  );
+  const legs = route.legs.map((leg, i) => {
+    if (!(leg.length > 0)) return "";
+    const steps: [number, string][] =
+      SLIDING && route.steady[i]
+        ? slides(leg, route.trail[i], route.top, route.stuck).map(([at, y]) => [at, `translate:0 ${y}px`])
+        : route.trail[i].map(([at, u]) => [at, reveal(leg, u).join(":")]);
+    return rule(`trail-${i}`, `[data-leg="${i}"]`, steps);
+  });
   return css + legs.join("");
 }
 
@@ -565,9 +607,24 @@ function showing(shown: Route["shown"], y: number) {
 // corner after; for a corner, a half-ring (stroked like the road, so they
 // line up) turning about the corner's centre inside its quarter, in a frame
 // turned (and mirrored) so the corner runs clockwise from 0°.
-function TrailLeg({ leg, index, pinned }: { leg: Leg; index: number; pinned: boolean }) {
+function TrailLeg({ leg, index, ride, stuck }: { leg: Leg; index: number; ride?: "pin" | "slide"; stuck: number }) {
   const { x, y, dx, dy, r, nx, ny, length } = leg;
-  if (pinned) {
+  if (ride === "slide") {
+    // A leg down the page, sliding: a bar SLACK longer than the leg each way
+    // slides in a sticky frame like the sticky bus's, clipped to the leg, so
+    // its leading end (see slides) rides on that bus.
+    const long = length + 1;
+    return (
+      <div className="trail-clip" style={{ left: x - 2, top: y, width: 4, height: long }}>
+        <div className="trail-ride" style={{ top: -y, height: stuck }}>
+          <div className="trail-frame">
+            <div className="trail-slide" data-leg={index} style={{ top: -(long + 2 * SLACK), height: long + 2 * SLACK }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (ride === "pin") {
     // A leg up or down the page, pinned: a bar as long as the leg slides in
     // a sticky track twice as long, clipped to the leg, so the sticky offset
     // (see pin) puts its leading end on the bus.
@@ -776,7 +833,16 @@ export default function ScrollRoute() {
           {/* Over the stops, but it only reaches each as it lights up amber too. */}
           <div className="scroll-trail">
             {route.legs.map(
-              (leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} pinned={PINNED && route.steady[i]} />
+              (leg, i) =>
+                leg.length > 0 && (
+                  <TrailLeg
+                    key={leg.s}
+                    leg={leg}
+                    index={i}
+                    ride={route.steady[i] ? (PINNED ? "pin" : SLIDING ? "slide" : undefined) : undefined}
+                    stuck={route.stuck}
+                  />
+                )
             )}
           </div>
           <Celebration at={route.stops[route.stops.length - 1]} scale={route.party} />

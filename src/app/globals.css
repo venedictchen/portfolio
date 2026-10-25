@@ -237,6 +237,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 .trail-track { left: 0; width: 100%; }
 /* On its own layer, so riding the scroll doesn't repaint the page. */
 .scroll-trail .trail-pin { position: sticky; width: 100%; background: var(--amber); will-change: transform; }
+/* A sliding leg: its bar slides in a sticky frame like the sticky bus's,
+   clipped to the leg. */
+.trail-ride { left: 0; width: 100%; }
+.scroll-trail .trail-frame { position: sticky; top: 0; height: 0; }
+.trail-slide { left: 0; width: 100%; background: var(--amber); will-change: transform; }
 .scroll-stop {
   fill: var(--page); stroke: var(--peach); stroke-width: 4;
   transition: fill 0.3s, stroke 0.3s;
