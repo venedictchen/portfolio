@@ -16,8 +16,11 @@ const STEP = 4;
 // legs, so there the route follows from the scroll handler too: a late frame
 // lags but never flashes.
 const APPLE = typeof navigator !== "undefined" && /^Apple/.test(navigator.vendor);
+// ?route=css or ?route=js picks the path regardless, to compare on a device.
+const PICK = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("route");
 const TIMELINE =
-  !APPLE &&
+  PICK !== "js" &&
+  (PICK === "css" || !APPLE) &&
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
@@ -371,9 +374,6 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   let projectsOn: [number, number];
   let writingOn: [number, number];
 
-  // From the scroll handler (iPhone), at a phone's pace the lap round the photo
-  // shows as lag, so there the bus crosses above it and runs straight down.
-  const skipLap = mode === "phone" && !TIMELINE;
   if (mode === "phone") {
     // Anticlockwise round the photo, so it leaves towards the rail.
     const lastYear = Math.max(
@@ -385,20 +385,18 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     );
     const turnX = (lastYear + viewRight) / 2;
     endX = leftX;
-    points = skipLap
-      ? [corner(startX, lineY), corner(turnX, lineY, 20), corner(turnX, aboveY), corner(leftX, aboveY), corner(leftX, end)]
-      : [
-          corner(startX, lineY),
-          corner(turnX, lineY, 20),
-          corner(turnX, aboveY),
-          corner(photo.left, aboveY, TURN, lap),
-          corner(photo.left, photo.bottom, FRAME, lap),
-          corner(photo.right, photo.bottom, FRAME, lap),
-          corner(photo.right, photo.top, FRAME, lap),
-          corner(leftX, photo.top),
-          corner(leftX, end),
-        ];
-    jobsOn = projectsOn = writingOn = [skipLap ? 3 : 7, leftX];
+    points = [
+      corner(startX, lineY),
+      corner(turnX, lineY, 20),
+      corner(turnX, aboveY),
+      corner(photo.left, aboveY, TURN, lap),
+      corner(photo.left, photo.bottom, FRAME, lap),
+      corner(photo.right, photo.bottom, FRAME, lap),
+      corner(photo.right, photo.top, FRAME, lap),
+      corner(leftX, photo.top),
+      corner(leftX, end),
+    ];
+    jobsOn = projectsOn = writingOn = [7, leftX];
   } else {
     const besideX = (photo.right + aboutText.left) / 2;
     const timelineX = (date.right + details.left) / 2;
@@ -439,28 +437,20 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
   // The hero line from when the bus first shows on screen (on a phone it
   // starts below the fold), so it doesn't dash to catch up.
   const shows = { end: 1, to: Math.max(lineY + toPage - BOTTOM * view, 0) };
-  const hero = { end: sampleAt(runs[1].s), to: lineY + toPage - AIM * view };
-  let ramps: { end: number; to: number }[];
-  if (skipLap) {
-    // Across above the photo no faster than the lap's approach (2.3x), then
-    // onto AIM over the first 2.5 screens down, below the top of the screen.
-    const rail = runs[3];
-    const across = Math.min(hero.to + (rail.s - runs[1].s) / 2.3, rail.y + toPage - TOP * view);
-    const settle = 2.5 * view;
-    ramps = [shows, hero, { end: sampleAt(rail.s), to: across }, { end: sampleAt(rail.s + settle), to: rail.y + settle + toPage - AIM * view }];
-  } else {
-    const photoHeight = photo.bottom - photo.top;
-    const share = photoHeight / (runs[7].s - runs[3].s);
-    const room = (BOTTOM - TOP) * view - photoHeight;
-    const lapScroll = Math.max((0.9 * room) / (1 - share), 60);
-    const lapStart = photo.top + toPage - TOP * view - lapScroll - 10;
-    ramps = [shows, hero, { end: sampleAt(runs[3].s), to: lapStart }, { end: sampleAt(runs[7].s), to: lapStart + lapScroll }];
-  }
-  // Where the bus starts easing down the screen to where it ends: on the
-  // last run, far enough back that it drifts at most 0.05 px per px scrolled.
-  const drift = 20 * Math.abs(end + toPage - last - AIM * view);
+  const photoHeight = photo.bottom - photo.top;
+  const share = photoHeight / (runs[7].s - runs[3].s);
+  const room = (BOTTOM - TOP) * view - photoHeight;
+  const lapScroll = Math.max((0.9 * room) / (1 - share), 60);
+  const lapStart = photo.top + toPage - TOP * view - lapScroll - 10;
+  const ramps = [
+    shows,
+    { end: sampleAt(runs[1].s), to: lineY + toPage - AIM * view },
+    { end: sampleAt(runs[3].s), to: lapStart },
+    { end: sampleAt(runs[7].s), to: lapStart + lapScroll },
+  ];
+  // Where the final run down enters the Contact section.
   const lastRun = sampleAt(runs[runs.length - 1].s);
-  const land = ys.findIndex((y, i) => i >= lastRun && y + toPage - AIM * view >= last - drift);
+  const land = ys.findIndex((y, i) => i >= lastRun && y >= contact.top);
 
   const on = ([run, x]: [number, number], y: number): Stop => ({
     at: runs[run].s + Math.abs(x - runs[run].x) + Math.abs(y - runs[run].y),
