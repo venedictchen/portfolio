@@ -235,7 +235,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 /* A pinned leg: its bar slides, sticky, along a track clipped to the leg. */
 .trail-clip { overflow: clip; }
 .trail-track { left: 0; width: 100%; }
-.scroll-trail .trail-pin { position: sticky; width: 100%; background: var(--amber); }
+/* On its own layer, so riding the scroll doesn't repaint the page. */
+.scroll-trail .trail-pin { position: sticky; width: 100%; background: var(--amber); will-change: transform; }
 .scroll-stop {
   fill: var(--page); stroke: var(--peach); stroke-width: 4;
   transition: fill 0.3s, stroke 0.3s;
@@ -251,10 +252,20 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 .bus-ride { position: absolute; top: 0; left: 0; width: 100%; }
 .bus-sticky { position: sticky; top: 0; height: 0; }
 .scroll-bus[data-frame="screen"] > .bus-face { opacity: 0; }
-.scroll-party * { opacity: 0; }
-.party-ring { fill: none; stroke: var(--amber); stroke-width: 3; }
-.party-ray { stroke: var(--amber); stroke-width: 3; stroke-linecap: round; }
-.party-twinkle { fill: var(--amber); transform-box: fill-box; transform-origin: center; }
+/* The celebration at the end of the road, in HTML so its scale and opacity
+   animations run on the compositor: rings swell, rays burst, twinkles flicker. */
+.scroll-party { position: absolute; width: 0; height: 0; }
+.scroll-party > * { position: absolute; opacity: 0; }
+.party-ring { left: -15.5px; top: -15.5px; width: 31px; height: 31px; border: 3px solid var(--amber); border-radius: 50%; }
+.party-ray {
+  left: 22.5px; top: -1.5px; width: 15px; height: 3px; border-radius: 1.5px;
+  background: var(--amber); transform-origin: -22.5px 1.5px;
+}
+.party-twinkle { left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+/* The bus's glow at the end: a soft amber blur behind it that only fades. */
+.bus-face { position: relative; }
+.bus-face > svg { position: relative; }
+.bus-glow { position: absolute; inset: -20% -12%; border-radius: 35%; background: var(--amber); filter: blur(12px); opacity: 0; }
 /* Set from script a frame at a time (data-glide), the page bus and the
    trail's bars and corners glide between frames on the compositor, which
    runs at the screen's rate; the sticky bus and pinned legs stay exact. */
@@ -266,7 +277,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   animation: party-ray 0.9s ease-out both, party-shine 1.6s ease-in-out 0.9s infinite;
 }
 .scroll-route[data-arrived] .party-twinkle { animation: party-twinkle 1.4s ease-in-out infinite both; }
-.scroll-route[data-arrived] .bus-face > svg { animation: party-glow 1.6s ease-in-out infinite; }
+.scroll-route[data-arrived] .bus-glow { animation: party-glow 1.6s ease-in-out infinite; }
 @keyframes party-ring { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 4.5; } }
 @keyframes party-ray {
   from { opacity: 0; scale: 0.6; }
@@ -283,9 +294,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
   60% { opacity: 0.4; scale: 0.8; }
   80% { opacity: 1; scale: 1; }
 }
-@keyframes party-glow {
-  50% { filter: drop-shadow(0 0 10px var(--amber)) drop-shadow(0 0 22px var(--amber)); }
-}
+@keyframes party-glow { 50% { opacity: 0.6; } }
 html[data-scroll-route] .scroll-route {
   display: block; position: absolute; top: 0; left: 0; width: 100%;
   z-index: 30; pointer-events: none; overflow: hidden; overflow: clip;

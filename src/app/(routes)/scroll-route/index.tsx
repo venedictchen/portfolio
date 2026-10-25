@@ -617,25 +617,27 @@ function pin(leg: Leg, at: number, screenY: number) {
   return down ? screenY - (leg.length + 1) : screenY;
 }
 
+// HTML, not SVG, and animating only transform and opacity (see globals.css),
+// so it runs on the compositor instead of repainting every frame.
 function Celebration({ at, scale }: { at: Stop; scale: number }) {
   return (
-    <g className="scroll-party" transform={`translate(${at.x} ${at.y}) scale(${scale})`}>
-      <circle className="party-ring" r="14" />
-      <circle className="party-ring" r="14" style={{ animationDelay: "1s" }} />
+    <div className="scroll-party" style={{ left: at.x, top: at.y, scale }}>
+      <i className="party-ring" />
+      <i className="party-ring" style={{ animationDelay: "1s" }} />
       {RAYS.map((angle) => (
-        <line key={angle} className="party-ray" x1="24" x2="36" style={{ rotate: `${angle}deg` }} />
+        <i key={angle} className="party-ray" style={{ rotate: `${angle}deg` }} />
       ))}
       {TWINKLES.map(([angle, distance, delay]) => (
-        <circle
+        <i
           key={angle}
           className="party-twinkle"
-          cx={Math.cos((angle * Math.PI) / 180) * distance}
-          cy={Math.sin((angle * Math.PI) / 180) * distance}
-          r="3"
-          style={{ animationDelay: `${delay}s` }}
+          style={{
+            translate: `${Math.cos((angle * Math.PI) / 180) * distance}px ${Math.sin((angle * Math.PI) / 180) * distance}px`,
+            animationDelay: `${delay}s`,
+          }}
         />
       ))}
-    </g>
+    </div>
   );
 }
 
@@ -754,7 +756,6 @@ export default function ScrollRoute() {
             {[...route.jobs, ...route.stops].map((stop) => (
               <circle key={stop.at} className="scroll-stop" cx={stop.x} cy={stop.y} r={route.pin} />
             ))}
-            <Celebration at={route.stops[route.stops.length - 1]} scale={route.party} />
           </svg>
           {/* Over the stops, but it only reaches each as it lights up amber too. */}
           <div className="scroll-trail">
@@ -762,8 +763,10 @@ export default function ScrollRoute() {
               (leg, i) => leg.length > 0 && <TrailLeg key={leg.s} leg={leg} index={i} pinned={PINNED && route.steady[i]} />
             )}
           </div>
+          <Celebration at={route.stops[route.stops.length - 1]} scale={route.party} />
           <div className="scroll-bus" data-frame="page">
             <div className="bus-face">
+              <i className="bus-glow" />
               <Bus className="block w-full" />
             </div>
           </div>
@@ -772,6 +775,7 @@ export default function ScrollRoute() {
               <div className="bus-sticky">
                 <div className="scroll-bus" data-frame="screen">
                   <div className="bus-face">
+                    <i className="bus-glow" />
                     <Bus className="block w-full" />
                   </div>
                 </div>
