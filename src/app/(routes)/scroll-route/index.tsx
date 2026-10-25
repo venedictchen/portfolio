@@ -10,17 +10,11 @@ const TURN = 40;
 const FRAME = 16; // matches the photo's rounded-2xl
 const STEP = 4;
 // Scroll-driven CSS animations move the bus on the compositor, in step with
-// the page; without them it follows from the scroll handler, a frame late.
-// Apple's engine (Safari, and every browser on iPhone) runs them threaded
-// only since 26.4, and on this route that flashes stale frames and trail
-// legs, so there the route follows from the scroll handler too: a late frame
-// lags but never flashes.
-const APPLE = typeof navigator !== "undefined" && /^Apple/.test(navigator.vendor);
-// ?route=css or ?route=js picks the path regardless, to compare on a device.
+// the page (Safari too, since 26.4); without them it follows from the scroll
+// handler, a frame late. ?route=js picks that path anyway, to compare.
 const PICK = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("route");
 const TIMELINE =
   PICK !== "js" &&
-  (PICK === "css" || !APPLE) &&
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
@@ -515,16 +509,24 @@ function reveal(leg: Leg, u: number) {
   return ["scale", leg.dx ? `${f.toFixed(4)} 1` : `1 ${f.toFixed(4)}`];
 }
 
-// The bus and each leg of the trail on the page's scroll timeline, their
-// keyframes' scroll positions mapped onto each one's range.
+// The bus and each leg of the trail on the page's scroll timeline. Every one
+// spans the whole route, holding its first and last values out to the ends:
+// Safari slips at the edges of an animation's range when scrolling back,
+// leaving a leg drawn, or not, apart from the bus.
 function animations(route: Route) {
+  const end = route.scroll[route.scroll.length - 1];
   const rule = (name: string, selector: string, steps: [number, string][]) => {
-    const [from, to] = [steps[0][0], steps[steps.length - 1][0]];
-    if (to <= from) return "";
-    const frames = steps.map(([at, value]) => `${(((at - from) / (to - from)) * 100).toFixed(4)}%{${value}}`);
+    const whole: [number, string][] = [
+      ...(steps[0][0] > 0 ? [[0, steps[0][1]] as [number, string]] : []),
+      ...steps,
+      ...(steps[steps.length - 1][0] < end ? [[end, steps[steps.length - 1][1]] as [number, string]] : []),
+    ];
+    const to = whole[whole.length - 1][0];
+    if (to <= 0) return "";
+    const frames = whole.map(([at, value]) => `${((at / to) * 100).toFixed(4)}%{${value}}`);
     return (
       `@keyframes ${name}{${frames.join("")}}` +
-      `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:${from}px ${to}px}`
+      `${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`
     );
   };
   const drive = (frames: Frame[]) =>
@@ -533,7 +535,6 @@ function animations(route: Route) {
   if (STICKY) {
     css += rule("bus-screen", '.scroll-bus[data-frame="screen"]', drive(route.screen));
     // Each bus's face fades in and out in a step where the other takes over.
-    const end = route.scroll[route.scroll.length - 1];
     for (const [which, frame] of ["page", "screen"].entries()) {
       const steps: [number, string][] = [];
       route.shown.forEach(([at, sticky], i) => {
