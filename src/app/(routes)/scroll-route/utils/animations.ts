@@ -1,4 +1,4 @@
-import { SLIDING, STICKY } from "../constants";
+import { FADE, SLIDING, STICKY } from "../constants";
 import type { Frame, Leg, Route } from "../types";
 import { slides } from "./keyframes";
 
@@ -38,17 +38,26 @@ export function animations(route: Route) {
   let css = rule("bus-page", '.scroll-bus[data-frame="page"]', drive(route.frames));
   if (STICKY) {
     css += rule("bus-screen", '.scroll-bus[data-frame="screen"]', drive(route.screen));
-    // Each bus's face fades in and out in a step where the other takes over.
-    for (const [which, frame] of ["page", "screen"].entries()) {
-      const steps: [number, string][] = [];
-      route.shown.forEach(([at, sticky], i) => {
-        const opacity = `opacity:${Number(sticky === which)}`;
-        if (i) steps.push([at - 0.01, steps.at(-1)![1]]);
-        steps.push([at, opacity]);
-      });
-      steps.push([Math.max(end, steps.at(-1)![0] + 1), steps.at(-1)![1]]);
-      css += rule(`bus-face-${frame}`, `[data-frame="${frame}"] > .bus-face`, steps);
-    }
+    // The sticky bus, drawn over the page one, fades in over FADE px of scroll
+    // where it takes over and out over FADE px before it hands back, with the
+    // page bus showing under it meanwhile. In step the two sit exactly
+    // together; where Safari draws them a little apart, it blends them
+    // rather than jumping from one to the other.
+    const page: [number, string][] = [[0, "opacity:1"]];
+    const screen: [number, string][] = [[0, "opacity:0"]];
+    const swaps = route.shown.slice(1);
+    swaps.forEach(([at, sticky], i) => {
+      const fade = Math.min(FADE, ((swaps[i + 1]?.[0] ?? Infinity) - at) / 3, (at - (swaps[i - 1]?.[0] ?? -Infinity)) / 3);
+      if (sticky) {
+        screen.push([at, "opacity:0"], [at + fade, "opacity:1"]);
+        page.push([at + fade - 0.01, "opacity:1"], [at + fade, "opacity:0"]);
+      } else {
+        screen.push([at - fade, "opacity:1"], [at, "opacity:0"]);
+        page.push([at - fade - 0.01, "opacity:0"], [at - fade, "opacity:1"]);
+      }
+    });
+    css += rule("bus-face-page", '[data-frame="page"] > .bus-face', page);
+    css += rule("bus-face-screen", '[data-frame="screen"] > .bus-face', screen);
   }
   const legs = route.legs.map((leg, i) => {
     if (leg.length <= 0) return "";

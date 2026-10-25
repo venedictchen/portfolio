@@ -27,6 +27,8 @@ export const PINNED = !TIMELINE && STICKY;
 export const SLIDING = TIMELINE && STICKY;
 // How far a sliding leg's bar runs past either end of the leg.
 export const SLACK = 1000;
+// px of scroll over which the sticky bus fades in or out over the page one.
+export const FADE = 48;
 
 // Bus position on screen, as fractions of the viewport height.
 export const [TOP, AIM, BOTTOM] = [0.1, 0.6, 0.95];
