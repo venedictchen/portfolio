@@ -27,6 +27,10 @@ const TIMELINE =
 // in step with the scroll, and a stale frame barely moves it. Sticky needs
 // the route's clip to be overflow: clip, not a scroll container.
 const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+// Without scroll timelines the trail is drawn from the scroll handler too,
+// a frame behind that bus; there the trail's legs running down the page
+// stick to it the same way, so their tips keep up with it.
+const PINNED = !TIMELINE && STICKY;
 
 // pace: minimum scroll per px of road to the next point
 type Point = { x: number; y: number; r: number; pace?: number };
@@ -54,6 +58,7 @@ type Route = {
   legs: Leg[];
   roads: number[]; // distance along the road of each sample
   scroll: number[]; // scroll position at each sample
+  top: number; // where the route starts on the page
   frames: Frame[]; // the bus's keyframes on the page
   stuck: number; // how far the sticky frame rides down the route
   screen: Frame[]; // the bus's keyframes in the sticky frame
@@ -455,6 +460,7 @@ function measure(overlay: HTMLElement, mode: Mode): Route | null {
     legs,
     roads,
     scroll,
+    top: toPage,
     frames,
     stuck,
     screen: inFrame(frames, toPage, stuck),
@@ -525,6 +531,19 @@ function showing(shown: Route["shown"], y: number) {
 // turned (and mirrored) so the corner runs clockwise from 0°.
 function TrailLeg({ leg, index }: { leg: Leg; index: number }) {
   const { x, y, dx, dy, r, nx, ny, length } = leg;
+  if (!r && !dx && PINNED) {
+    // A leg up or down the page, pinned: a bar as long as the leg slides in
+    // a sticky track twice as long, clipped to the leg, so the sticky offset
+    // (see pin) puts its leading end on the bus.
+    const long = length + 1;
+    return (
+      <div className="trail-clip" style={{ left: x - 2, top: dy > 0 ? y : y - long, width: 4, height: long }}>
+        <div className="trail-track" style={{ top: dy > 0 ? -long : 0, height: 2 * long }}>
+          <div className="trail-pin" data-leg={index} style={{ height: long, top: dy > 0 ? -1e5 : 1e5 }} />
+        </div>
+      </div>
+    );
+  }
   if (!r) {
     const long = length + 1;
     const style = dx
@@ -547,15 +566,30 @@ function TrailLeg({ leg, index }: { leg: Leg; index: number }) {
   );
 }
 
-// Without scroll timelines: the bus's keyframes, interpolated at scroll y.
-function place(bus: HTMLElement, frames: Frame[], y: number) {
+// The bus's keyframes interpolated at scroll y: [x, y, heading].
+function along(frames: Frame[], y: number) {
   let i = 0;
   for (let step = 1 << 15; step; step >>= 1) if (i + step < frames.length && frames[i + step][0] <= y) i += step;
   const [a, b] = [frames[i], frames[Math.min(i + 1, frames.length - 1)]];
   const t = b[0] > a[0] ? Math.min(Math.max((y - a[0]) / (b[0] - a[0]), 0), 1) : 0;
-  const [x, busY, heading] = [1, 2, 3].map((k) => a[k] + t * (b[k] - a[k]));
+  return [1, 2, 3].map((k) => a[k] + t * (b[k] - a[k]));
+}
+
+// Without scroll timelines: the bus, placed from the scroll handler.
+function place(bus: HTMLElement, frames: Frame[], y: number) {
+  const [x, busY, heading] = along(frames, y);
   bus.style.translate = `${x}px ${busY}px`;
   bus.style.rotate = `${heading}deg`;
+}
+
+// A pinned leg's sticky offset: on the leg, its leading end sits where the
+// bus is on screen (screenY); off it, far enough either way to hold the leg
+// all drawn or not at all.
+function pin(leg: Leg, at: number, screenY: number) {
+  const down = leg.dy > 0;
+  if (at <= leg.s) return down ? -1e5 : 1e5;
+  if (at >= leg.s + leg.length) return down ? 1e5 : -1e5;
+  return down ? screenY - (leg.length + 1) : screenY;
 }
 
 function Celebration({ at, scale }: { at: Stop; scale: number }) {
@@ -643,13 +677,18 @@ export default function ScrollRoute() {
           const sticky = showing(route.shown, y);
           faces.forEach((face, which) => face?.style.setProperty("opacity", `${Number(sticky === which)}`));
         }
+        // Where the bus is on screen, for the pinned legs: steady along most
+        // of them, so a late frame still puts their tips on the sticky bus.
+        const screenY = along(route.frames, y)[1] + route.top - y;
         legs.forEach((el) => {
           const i = Number(el.dataset.leg);
           const leg = route.legs[i];
-          const u = Math.min(Math.max(at - leg.s, 0), leg.length);
+          const pinned = el.classList.contains("trail-pin");
+          const u = pinned ? pin(leg, at, screenY) : Math.min(Math.max(at - leg.s, 0), leg.length);
           if (drawn[i] === u) return;
           drawn[i] = u;
-          el.style.setProperty(...(reveal(leg, u) as [string, string]));
+          if (pinned) el.style.top = `${u}px`;
+          else el.style.setProperty(...(reveal(leg, u) as [string, string]));
         });
       }
       route.years.forEach((year, i) => years[i]?.toggleAttribute("data-lit", at >= year));

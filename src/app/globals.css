@@ -232,6 +232,10 @@ html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
 .trail-rotor { left: 0; top: 0; rotate: -180deg; }
 .trail-half { top: 0; }
 .trail-half path { fill: none; stroke: var(--amber); stroke-width: 4; }
+/* A pinned leg: its bar slides, sticky, along a track clipped to the leg. */
+.trail-clip { overflow: clip; }
+.trail-track { left: 0; width: 100%; }
+.scroll-trail .trail-pin { position: sticky; width: 100%; background: var(--amber); }
 .scroll-stop {
   fill: var(--page); stroke: var(--peach); stroke-width: 4;
   transition: fill 0.3s, stroke 0.3s;
