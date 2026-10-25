@@ -18,12 +18,14 @@ const TIMELINE =
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
-// Even so, a browser can show a frame from a scroll position or two back
-// (Safari does). On straights that run down the page the bus holds still on
-// screen, so there a second bus rides a sticky frame that the browser keeps
-// in step with the scroll, and a stale frame barely moves it. Sticky needs
-// the route's clip to be overflow: clip, not a scroll container.
-const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+// From the scroll handler, the bus shows a frame from a scroll position or
+// two back. On straights that run down the page it holds still on screen,
+// so there a second bus rides a sticky frame that the browser keeps in step
+// with the scroll, and a stale frame barely moves it. (Not with scroll
+// timelines: they keep the bus and trail together, where Safari can draw a
+// sticky frame a moment behind them.) Sticky needs the route's clip to be
+// overflow: clip, not a scroll container.
+const STICKY = !TIMELINE && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
 // Without scroll timelines the trail is drawn from the scroll handler too,
 // a frame behind that bus; there the trail's legs running down the page
 // stick to it the same way, so their tips keep up with it.
