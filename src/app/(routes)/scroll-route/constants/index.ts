@@ -29,7 +29,7 @@ export const SLIDING = TIMELINE && STICKY;
 export const SLACK = 1000;
 
 // Bus position on screen, as fractions of the viewport height.
-export const [TOP, AIM, BOTTOM] = [0.1, 0.6, 0.9];
+export const [TOP, AIM, BOTTOM] = [0.1, 0.6, 0.95];
 // px of scroll either side over which the bus eases from one speed to the next.
 export const EASE = 60;
 

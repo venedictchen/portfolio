@@ -141,21 +141,28 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
   const shows = { end: 1, to: Math.max(lineY + toPage - BOTTOM * view, 0) };
   // The lap's scroll budget: the most the page can scroll while the photo's
   // bottom (after the right edge) stays above BOTTOM and its top (at the
-  // end) below TOP. 90% of it, for slack.
+  // end) below TOP. 95% of it, for slack. On a short screen it's small, and
+  // the lap the fastest stretch of the road.
   const photoHeight = photo.bottom - photo.top;
   const share = photoHeight / (runs[7].s - runs[3].s);
   const room = (BOTTOM - TOP) * view - photoHeight;
-  const lapScroll = Math.max((0.9 * room) / (1 - share), 60);
-  const lapStart = photo.top + toPage - TOP * view - lapScroll - 10;
-  const ramps = [
-    shows,
-    { end: sampleAt(runs[1].s), to: lineY + toPage - AIM * view },
-    { end: sampleAt(runs[3].s), to: lapStart },
-    { end: sampleAt(runs[7].s), to: lapStart + lapScroll },
-  ];
+  const lapScroll = Math.max((0.95 * room) / (1 - share), 60);
+  // It ends with the photo's top a little below TOP, clear of the navbar
+  // even where easing carries the bus a touch further.
+  const lapStart = photo.top + toPage - TOP * view - lapScroll - 24;
   // Where the final run down enters the Contact section.
   const lastRun = sampleAt(runs.at(-1)!.s);
   const land = ys.findIndex((y, i) => i >= lastRun && y >= contact.top);
+  // After the lap the bus drops from TOP back down to AIM over twice as much
+  // road as that drop, so at about twice the scroll's speed, not in a dash.
+  const settle = Math.min(sampleAt(runs[7].s + 2 * (AIM - TOP) * view), land);
+  // From the hero line to the lap at one even speed.
+  const ramps = [
+    shows,
+    { end: sampleAt(runs[3].s), to: lapStart },
+    { end: sampleAt(runs[7].s), to: lapStart + lapScroll },
+    { end: settle, to: ys[settle] + toPage - AIM * view },
+  ];
 
   const on = ([run, x]: [number, number], y: number): Stop => ({
     at: runs[run].s + Math.abs(x - runs[run].x) + Math.abs(y - runs[run].y),
