@@ -26,7 +26,11 @@ const TIMELINE =
 // screen, so there a second bus rides a sticky frame that the browser keeps
 // in step with the scroll, and a stale frame barely moves it. Sticky needs
 // the route's clip to be overflow: clip, not a scroll container.
-const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+// Other iPhone browsers (Chrome, Firefox, Edge…) slide their address bar at
+// the top, which moves where sticky elements stick against the page, so a
+// sticky bus would jump as the bar shows and hides; they get none.
+const TOP_BAR = APPLE && /\b(CriOS|FxiOS|EdgiOS|OPiOS|GSA)\//.test(navigator.userAgent);
+const STICKY = !TOP_BAR && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
 // Without scroll timelines the trail is drawn from the scroll handler too,
 // a frame behind that bus; there the trail's legs running down the page
 // stick to it the same way, so their tips keep up with it.
@@ -662,7 +666,25 @@ export default function ScrollRoute() {
     observer.observe(document.body);
     desktop.addEventListener("change", remeasure);
     tablet.addEventListener("change", remeasure);
+    // How often this browser runs page updates (Safari: 60 a second, even on
+    // 120 Hz screens): the glide spans about two of them, enough to bridge
+    // each gap without trailing further behind than it must. Sampled once
+    // the page has settled after loading; until then it glides 40 ms.
+    let sample = 0;
+    const times: number[] = [];
+    const tick = (t: number) => {
+      times.push(t);
+      if (times.length < 12) sample = requestAnimationFrame(tick);
+      else {
+        const gaps = times.slice(1).map((time, i) => time - times[i]).sort((a, b) => a - b);
+        const glide = Math.min(Math.max(2 * gaps[gaps.length >> 1], 12), 40);
+        overlay.style.setProperty("--glide", `${Math.round(glide)}ms`);
+      }
+    };
+    const settled = TIMELINE ? 0 : window.setTimeout(() => (sample = requestAnimationFrame(tick)), 1500);
     return () => {
+      clearTimeout(settled);
+      cancelAnimationFrame(sample);
       observer.disconnect();
       desktop.removeEventListener("change", remeasure);
       tablet.removeEventListener("change", remeasure);
