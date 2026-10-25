@@ -1,5 +1,6 @@
-import { AIM, BOTTOM, EASE, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
+import { AIM, BOTTOM, DRIVE, EASE, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
 import type { Mode, Point, Route, Stop } from "../types";
+import { plan } from "./drive";
 import { inFrame, keyframes, reveals, steadyLegs } from "./keyframes";
 import { trace } from "./road";
 import { ease, timetable } from "./timetable";
@@ -229,5 +230,8 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
     stops: [on(projectsOn, projectsH2.midY), on(writingOn, writingH2.midY), { at: length, x: endX, y: end }],
+    drive: DRIVE
+      ? plan({ legs, roads, xs, ys, headings: turns, lap: [runs[3].s, runs[7].s], view, top: toPage, last, length })
+      : undefined,
   };
 }

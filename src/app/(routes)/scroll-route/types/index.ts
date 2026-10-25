@@ -10,6 +10,31 @@ export type Step = [scroll: number, u: number]; // u: px of a leg drawn by then
 export type Stop = { at: number; x: number; y: number }; // at: distance along the road
 // How a leg along a steady straight rides with the sticky bus.
 export type Ride = "pin" | "slide";
+export type Pose = [x: number, y: number, heading: number];
+
+// Drive mode (see useRouteDrive). A stretch the bus drives by itself: its
+// road, the scroll that sets it off forwards and sends it back, how long it
+// takes in ms, the hold it ends in, and keyframes for the bus and for each
+// piece of trail along it.
+export type Drive = {
+  from: number;
+  to: number;
+  forward: number;
+  back: number;
+  duration: number;
+  hold?: number;
+  start: Pose;
+  end: Pose;
+  bus: Keyframe[];
+  pieces: [piece: number, keyframes: Keyframe[]][];
+};
+// A stretch down a straight where the bus is held still on screen while the
+// page scrolls: its road, its top and bottom on the page, and the scroll
+// over which it's held.
+export type Hold = { from: number; to: number; top: number; bottom: number; start: number; end: number; x: number };
+// A piece of trail: all or part of a leg, along a drive or a hold.
+export type Piece = { leg: Leg; drive?: number; hold?: number };
+export type Plan = { screen: number; view: number; drives: Drive[]; holds: Hold[]; pieces: Piece[] };
 
 export type Route = {
   height: number;
@@ -31,4 +56,5 @@ export type Route = {
   years: number[];
   jobs: Stop[];
   stops: Stop[];
+  drive?: Plan; // in drive mode
 };

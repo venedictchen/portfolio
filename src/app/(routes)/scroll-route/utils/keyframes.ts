@@ -4,7 +4,7 @@ import type { Frame, Leg, Step } from "../types";
 // Keyframes from samples taken at increasing scroll positions: the samples,
 // less those that interpolating between their neighbours puts within
 // tolerance in every series ([values, tolerance]).
-function simplify(scroll: number[], series: [number[], number][]) {
+export function simplify(scroll: number[], series: [number[], number][]) {
   const keep = [0];
   for (let from = 0, to = 2; to < scroll.length; to++) {
     let fits = to - from < 256;
