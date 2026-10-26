@@ -3,49 +3,27 @@ export const TABLET = "(min-width: 48rem)";
 export const TURN = 40;
 export const FRAME = 16; // matches the photo's rounded-2xl
 export const STEP = 4;
-// ?route=js, css, view, drive, mixed, follow or glide picks one of the paths
-// below anyway, to compare.
-const PICK = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("route");
-// To try on iPhone: the bus and trail run the scroll timeline's keyframes as
-// a timed animation, kept up with the scroll by its speed alone (see
-// useRouteFollow), so it follows the scroll a little behind but smoothly.
-export const FOLLOW = PICK === "follow";
-// To try on iPhone: as with scroll timelines, but on a view timeline of the
-// route itself (see animations).
-export const VIEW = PICK === "view";
-// To try on iPhone: drive mode, but the hero line follows the scroll.
-export const MIXED = PICK === "mixed";
-// To try on iPhone: held along the long straights as in drive mode, and
-// elsewhere it glides smoothly after the scroll in timed animations (see
-// useRouteGlide).
-export const GLIDE = PICK === "glide";
 // From the scroll handler, the bus shows a frame from a scroll position or
 // two back; on iOS even scroll timelines are drawn a little apart from the
 // scroll. On straights that run down the page the bus holds still on screen,
 // so there a second bus rides a sticky frame that the browser keeps in step
 // with the scroll, and a frame a little off barely moves it. Sticky needs
 // the route's clip to be overflow: clip, not a scroll container.
-export const STICKY = !FOLLOW && typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
-// On iPhone and iPad even that leaves the bus shaking wherever it moves on
-// screen, so there it never follows the scroll by animation: it's held
+export const STICKY = typeof CSS !== "undefined" && CSS.supports("overflow", "clip");
+// On phones and tablets even that leaves the bus shaking wherever it moves
+// on screen, so there it never follows the scroll by animation: it's held
 // still on screen along the long straights, natively, and drives by itself
-// (a timed animation) everywhere else. See useRouteDrive.
+// (a timed animation) everywhere else. See useRouteDrive. (An iPad with a
+// trackpad points finely, but is still a tablet.)
 export const DRIVE =
   STICKY &&
-  (PICK === "drive" ||
-    MIXED ||
-    (PICK === null &&
-      typeof navigator !== "undefined" &&
-      navigator.vendor === "Apple Computer, Inc." &&
-      navigator.maxTouchPoints > 1));
-// Glide mode shares drive mode's holds, buses and trail, not its drives.
-export const HELD = DRIVE || (STICKY && GLIDE);
+  typeof window !== "undefined" &&
+  (window.matchMedia("(pointer: coarse)").matches ||
+    (navigator.vendor === "Apple Computer, Inc." && navigator.maxTouchPoints > 1));
 // Scroll-driven CSS animations move the bus on the compositor, in step with
 // the page; without them it follows from the scroll handler, a frame late.
 export const TIMELINE =
-  !HELD &&
-  !FOLLOW &&
-  PICK !== "js" &&
+  !DRIVE &&
   typeof CSS !== "undefined" &&
   CSS.supports("animation-timeline", "scroll()") &&
   CSS.supports("animation-range", "0px 1px");
@@ -53,9 +31,9 @@ export const TIMELINE =
 // their tips stay on it: from the scroll handler they're pinned (see pin),
 // with scroll timelines they slide in a sticky frame like the bus's (see
 // slides).
-export const PINNED = !TIMELINE && !HELD && STICKY;
+export const PINNED = !TIMELINE && !DRIVE && STICKY;
 // The bus and trail placed from the scroll handler.
-export const PLACED = !TIMELINE && !HELD && !FOLLOW;
+export const PLACED = !TIMELINE && !DRIVE;
 export const SLIDING = TIMELINE && STICKY;
 // How far a sliding leg's bar runs past either end of the leg.
 export const SLACK = 1000;

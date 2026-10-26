@@ -1,9 +1,9 @@
 import { useEffect, type RefObject } from "react";
 import type { Pose, Route } from "../types";
 import { reveal } from "../utils/animations";
-import { ease, pose } from "../utils/drive";
+import { ease } from "../utils/drive";
 
-// Drive mode (iPhone and iPad): nothing about the bus follows the scroll by
+// Drive mode (phones and tablets): nothing about the bus follows the scroll by
 // animation, which WebKit draws a little apart from the page. Along a hold
 // a bus rides a sticky frame, still on screen, so the browser itself keeps
 // it in step; everywhere else one bus drives by itself, a timed animation
@@ -16,7 +16,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     const overlay = ref.current;
     const plan = route?.drive;
     const bus = overlay?.querySelector<HTMLElement>('.scroll-bus[data-frame="drive"]');
-    if (!route || !overlay || plan?.kind !== "drive" || !bus) return;
+    if (!route || !overlay || !plan || !bus) return;
     const { drives, holds, pieces, screen, view } = plan;
     const held = holds.map((_, k) => overlay.querySelector<HTMLElement>(`[data-hold="${k}"]`)!);
     const trail = new Map(Array.from(overlay.querySelectorAll<HTMLElement>("[data-leg]"), (el) => [Number(el.dataset.leg), el]));
@@ -35,16 +35,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     let through = -1; // the hold the held bus is sliding right through, if any
     let shown: HTMLElement | undefined;
     let frame = 0;
-    // Mixed mode: the road up to the lap follows the scroll. The bus and the
-    // trail along it run on its scroll-linked rules while the bus is there
-    // (data-approach); coming back to it with the scroll further on, the bus
-    // chases along it in short timed steps until it's where the scroll is.
-    const approach = plan.scrolled;
-    const course = plan.poses && { roads: route.roads, ...plan.poses };
-    const lead = pieces.flatMap((piece, j) => (approach && piece.drive === undefined && piece.hold === undefined ? [j] : []));
-    let chase: { to: number; animations: Animation[] } | null = null;
-    let chasing = false;
-    let p = 0; // where along the approach the chasing bus is
 
     const show = (el: HTMLElement) => {
       if (el === shown) return;
@@ -123,63 +113,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
         past[k].style.setProperty(...(reveal(leg, state === "past" ? leg.length : 0) as [string, string]));
       });
     };
-    // The road the scroll asks for along the approach.
-    const toward = (y: number) => {
-      const { roads, scroll } = approach!;
-      let i = 0;
-      for (let step = 1 << 15; step; step >>= 1) if (i + step < scroll.length && scroll[i + step] <= y) i += step;
-      const j = Math.min(i + 1, scroll.length - 1);
-      const t = scroll[j] > scroll[i] ? Math.min(Math.max((y - scroll[i]) / (scroll[j] - scroll[i]), 0), 1) : 0;
-      return roads[i] + t * (roads[j] - roads[i]);
-    };
-    // The bus and the trail along the approach as styles, at road `at`.
-    const settleApproach = (at: number) => {
-      park(pose(course!, at));
-      for (const j of lead) {
-        const { leg } = pieces[j];
-        trail.get(j)?.style.setProperty(...(reveal(leg, Math.min(Math.max(at - leg.s, 0), leg.length)) as [string, string]));
-      }
-    };
-    const onApproach = (on: boolean) => overlay.toggleAttribute("data-approach", on);
-    // A step of the chase: from p to where the scroll is, or done once there.
-    const chaseOn = (y: number) => {
-      if (chase?.animations[0].playState === "running") return;
-      if (chase) {
-        settleApproach(chase.to);
-        chase.animations.forEach((animation) => animation.cancel());
-        chase = null;
-      }
-      const target = toward(y);
-      if (Math.abs(target - p) < 1.5) {
-        chasing = false;
-        onApproach(true);
-        return;
-      }
-      const d = target - p;
-      const n = Math.max(2, Math.ceil(Math.abs(d) / 6));
-      const at = Array.from({ length: n + 1 }, (_, k) => p + (d * k) / n);
-      const timing = { duration: Math.min(Math.max(Math.abs(d) / 2.5, 80), 250), fill: "forwards" as FillMode };
-      const animations = [
-        bus.animate(
-          at.map((q, k) => {
-            const [x, y, heading] = pose(course!, q);
-            return { offset: k / n, translate: `${x}px ${y}px`, rotate: `${heading}deg` };
-          }),
-          timing
-        ),
-      ];
-      for (const j of lead) {
-        const { leg } = pieces[j];
-        if (leg.s + leg.length <= Math.min(p, target) || leg.s >= Math.max(p, target)) continue;
-        const keys = at.map((q, k) => {
-          const [property, value] = reveal(leg, Math.min(Math.max(q - leg.s, 0), leg.length));
-          return { offset: k / n, [property]: value };
-        });
-        animations.push(trail.get(j)!.animate(keys, timing));
-      }
-      chase = { to: target, animations };
-      p = target;
-    };
     // Where the hold before drive i is, if it follows one.
     const before = (i: number) => (i > 0 ? drives[i - 1].hold : undefined);
 
@@ -193,7 +126,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
         return y - (k === undefined ? (drives[i + 1]?.forward ?? Infinity) : holds[k].start);
       }
       const k = before(i);
-      return (k === undefined ? (drives[i - 1]?.back ?? plan.scrolled?.end ?? -Infinity) : holds[k].end) - y;
+      return (k === undefined ? (drives[i - 1]?.back ?? -Infinity) : holds[k].end) - y;
     };
     // The further behind, the faster it drives (up to 6 times), so the bus
     // catches up without ever jumping.
@@ -206,11 +139,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     };
     const start = (i: number, dir: number) => {
       const drive = drives[i];
-      // Off the approach, which it leaves all drawn.
-      if (approach && i === 0 && dir > 0) {
-        settleApproach(approach.to);
-        onApproach(false);
-      }
       park(dir > 0 ? drive.start : drive.end);
       show(bus);
       const timing: KeyframeAnimationOptions = { duration: drive.duration, fill: "both" };
@@ -235,13 +163,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       active = null;
       if (dir > 0) join(drives[i].hold, "top");
       else join(before(i), "bottom");
-      // Back at the approach: on its scroll-linked rules if the scroll is
-      // there too, or chasing it if it has gone on up.
-      if (approach && i === 0 && dir < 0) {
-        p = approach.to;
-        if (window.scrollY >= approach.end - 1) onApproach(true);
-        else chasing = true;
-      }
       tick();
     }
 
@@ -263,9 +184,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       }
       const k = held.indexOf(shown!);
       if (k >= 0) return holds[k].from + Math.min(Math.max(y - holds[k].start, 0), holds[k].to - holds[k].from);
-      // Mixed mode: along the approach it follows the scroll.
-      if (chasing) return p;
-      if (!done && approach && y < approach.end) return toward(y);
       return done ? drives[done - 1].to : drives[0].from;
     };
     const light = (at: number, resting: boolean) => {
@@ -281,7 +199,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     // Turns the drive under way round, or sets the next one off, one at a
     // time: never while a held bus is still sliding to its place.
     const steer = (y: number) => {
-      if (chasing) return chaseOn(y);
       const n = wanted(y);
       if (active) {
         if ((active.dir > 0 && n <= active.i) || (active.dir < 0 && n > active.i)) {
@@ -299,7 +216,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       steer(y);
       mark();
       light(road(y), resting);
-      if ((active || sliding.length || chasing) && !frame) frame = requestAnimationFrame(() => tick());
+      if ((active || sliding.length) && !frame) frame = requestAnimationFrame(() => tick());
     }
 
     // As far along as the scroll is, without driving there.
@@ -308,7 +225,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     drives.forEach((_, i) => draw(i, i < done));
     park(done ? drives[done - 1].end : drives[0].start);
     join(done ? drives[done - 1].hold : undefined, "top", false);
-    if (approach && !done) onApproach(true);
 
     let rest = 0;
     const onScroll = () => {
@@ -324,7 +240,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       clearTimeout(rest);
       active?.animations.forEach((animation) => animation.cancel());
       stopSliding();
-      chase?.animations.forEach((animation) => animation.cancel());
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("scrollend", onScroll);
     };

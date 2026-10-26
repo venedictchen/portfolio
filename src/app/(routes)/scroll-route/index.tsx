@@ -2,12 +2,12 @@
 
 import { useRef } from "react";
 import { Bus } from "@/components";
-import { FOLLOW, PINNED, SLIDING, STICKY, TIMELINE } from "./constants";
+import { PINNED, SLIDING, STICKY, TIMELINE } from "./constants";
 import { Celebration } from "./elements/celebration";
 import { TrailLeg } from "./elements/trail-leg";
-import { useRoute, useRouteDrive, useRouteFollow, useRouteGlide, useRouteProgress } from "./hooks";
+import { useRoute, useRouteDrive, useRouteProgress } from "./hooks";
 import type { Ride } from "./types";
-import { animations, heroRules } from "./utils/animations";
+import { animations } from "./utils/animations";
 
 // Legs along steady straights ride with the sticky bus: pinned from the
 // scroll handler, sliding with scroll timelines.
@@ -30,8 +30,6 @@ export default function ScrollRoute() {
   const route = useRoute(ref);
   useRouteProgress(ref, route);
   useRouteDrive(ref, route);
-  useRouteFollow(ref, route);
-  useRouteGlide(ref, route);
   const plan = route?.drive;
 
   return (
@@ -53,7 +51,7 @@ export default function ScrollRoute() {
                     : // Along a hold: the trail sliding with the held bus, and a
                       // plain copy drawn once the bus has gone past it.
                       [
-                        <TrailLeg key={piece.leg.s} leg={piece.leg} index={i} ride="slide" stuck={route.stuck} rest={plan.holds[piece.hold].screen ?? plan.screen} />,
+                        <TrailLeg key={piece.leg.s} leg={piece.leg} index={i} ride="slide" stuck={route.stuck} rest={plan.screen} />,
                         <TrailLeg key={`${piece.leg.s}-past`} leg={piece.leg} index={`past-${piece.hold}`} stuck={route.stuck} />,
                       ]
                 )
@@ -79,7 +77,7 @@ export default function ScrollRoute() {
               {/* A bus per hold, sticky at the hold's place on screen within it. */}
               {plan.holds.map((hold, k) => (
                 <div key={hold.from} className="bus-ride" style={{ top: hold.top, height: hold.bottom - hold.top }}>
-                  <div className="bus-sticky" style={{ top: hold.screen ?? plan.screen }}>
+                  <div className="bus-sticky" style={{ top: plan.screen }}>
                     <div className="scroll-bus" data-frame="hold" data-hold={k} style={{ translate: `${hold.x}px 0px`, rotate: "90deg" }}>
                       {face}
                     </div>
@@ -103,8 +101,7 @@ export default function ScrollRoute() {
               )}
             </>
           )}
-          {(TIMELINE || FOLLOW) && <style>{animations(route)}</style>}
-          {plan?.scrolled && <style>{heroRules(route)}</style>}
+          {TIMELINE && <style>{animations(route)}</style>}
         </>
       )}
     </div>

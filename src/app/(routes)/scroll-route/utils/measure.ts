@@ -1,7 +1,6 @@
-import { AIM, BOTTOM, DRIVE, EASE, FRAME, HELD, MIXED, SLIDING, STEP, TOP, TURN } from "../constants";
-import type { Mode, Plan, Point, Route, Stop } from "../types";
-import { approach, plan } from "./drive";
-import { glide } from "./glide";
+import { AIM, BOTTOM, DRIVE, EASE, FRAME, SLIDING, STEP, TOP, TURN } from "../constants";
+import type { Mode, Point, Route, Stop } from "../types";
+import { plan } from "./drive";
 import { inFrame, keyframes, reveals, steadyLegs } from "./keyframes";
 import { trace } from "./road";
 import { ease, timetable } from "./timetable";
@@ -211,21 +210,6 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     });
   }
 
-  // Drive mode's plan (mixed mode: the hero line still follows the scroll), or glide mode's.
-  const course = { legs, roads, xs, ys, headings: turns, view, top: toPage };
-  let drive: Plan | undefined;
-  if (DRIVE) {
-    // Mixed mode follows the scroll up to the lap, reaching it once the whole
-    // photo is on screen, then laps it at once and drops onto its hold.
-    let scrolled;
-    if (MIXED) {
-      const hero: [number, number] = [legs[0].s + legs[0].length, trail[0].at(-1)![0]];
-      const ready = Math.max(photo.bottom + toPage - 0.9 * view, hero[1] + (runs[3].s - hero[0]) / 2);
-      scrolled = approach({ legs, roads, xs, ys, headings: turns, scroll }, hero, runs[3].s, ready);
-    }
-    drive = plan({ ...course, lap: [runs[3].s, runs[7].s], last, length, scrolled, join: MIXED ? AIM + 0.03 : undefined, speed: MIXED ? 1.6 : undefined });
-  } else if (HELD) drive = glide({ ...course, steady, scroll });
-
   return {
     height: end + 60,
     lead: mode === "phone" ? 0.25 * view : 0,
@@ -246,6 +230,8 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
     years: years.map((pin) => pin.x - startX),
     jobs: jobs.map((y) => on(jobsOn, y)),
     stops: [on(projectsOn, projectsH2.midY), on(writingOn, writingH2.midY), { at: length, x: endX, y: end }],
-    drive,
+    drive: DRIVE
+      ? plan({ legs, roads, xs, ys, headings: turns, lap: [runs[3].s, runs[7].s], view, top: toPage, last, length })
+      : undefined,
   };
 }

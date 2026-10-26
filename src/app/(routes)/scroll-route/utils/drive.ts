@@ -1,10 +1,12 @@
 import { AIM } from "../constants";
-import type { Approach, Drive, Hold, Leg, Piece, Plan, Pose, Step } from "../types";
+import type { Drive, Hold, Leg, Piece, Plan, Pose } from "../types";
 import { reveal } from "./animations";
-import { keyframes, reveals, simplify } from "./keyframes";
+import { simplify } from "./keyframes";
 
-// Road px per ms the bus averages when it drives by itself.
+// Road px per ms the bus averages when it drives by itself, and on the first
+// drive, round the photo and onto the straight that then follows the scroll.
 const SPEED = 1.1;
+const FIRST = 1.6;
 // px of scroll a drive's trigger holds either side, so it can't flicker.
 const HYSTERESIS = 24;
 
@@ -22,13 +24,10 @@ type Course = {
   top: number; // where the route starts on the page
   last: number; // the furthest the page is sure to scroll
   length: number;
-  scrolled?: Approach; // mixed mode: the road up to `to` follows the scroll until `end`
-  join?: number; // share of the screen down which the bus joins the first hold, at its drive's start
-  speed?: number; // road px per ms the bus averages, if not SPEED
 };
 
 // The bus's place at road p.
-export function pose({ roads, xs, ys, headings }: Pick<Course, "roads" | "xs" | "ys" | "headings">, p: number): Pose {
+function pose({ roads, xs, ys, headings }: Course, p: number): Pose {
   let i = 0;
   for (let step = 1 << 15; step; step >>= 1) if (i + step < roads.length && roads[i + step] <= p) i += step;
   const j = Math.min(i + 1, roads.length - 1);
@@ -40,7 +39,7 @@ export function pose({ roads, xs, ys, headings }: Pick<Course, "roads" | "xs" | 
 const part = (leg: Leg, u0: number, u1: number): Leg =>
   leg.r ? leg : { ...leg, s: leg.s + u0, length: u1 - u0, x: leg.x + leg.dx * u0, y: leg.y + leg.dy * u0 };
 
-type Stretch = { from: number; to: number; forward: number; hold?: number };
+type Stretch = { from: number; to: number; forward: number; hold?: number; speed?: number };
 
 const ridable = (c: Course, leg: Leg) =>
   !leg.r && !leg.dx && leg.dy > 0 && leg.s >= c.lap[1] - 0.01 && leg.length >= 0.5 * c.view;
@@ -50,9 +49,11 @@ const ridable = (c: Course, leg: Leg) =>
 // and drives the rest. Each drive sets off once its lowest point is 90% down
 // the screen, so the bus stays in view while it drives; it drops down the
 // straight it ends in far enough to reach AIM after a quarter screen more of
-// scroll, giving it time to get there first. The drive into the lap ends
-// where the lap starts, so the lap plays once the photo is on screen, and a
-// drive that would no longer fit on screen stops short and waits.
+// scroll, giving it time to get there first, and a drive that would no
+// longer fit on screen stops short and waits. The first drive, though, runs
+// from the hero line round the photo and onto the first straight in one go,
+// quickly, setting off when the road to the photo comes due: from there on
+// the straight's what shows the scroll.
 function layout(c: Course) {
   const { roads, ys, view, top, last } = c;
   const screen = AIM * view;
@@ -60,18 +61,18 @@ function layout(c: Course) {
   const lastHold = last - 0.05 * view - wait;
   const stretches: Stretch[] = [];
   const holds: Hold[] = [];
-  // In mixed mode the drives start where the hero line, following the scroll, ends.
-  let from = c.scrolled?.to ?? 0;
-  let earliest = c.scrolled ? c.scrolled.end + HYSTERESIS : 2 * HYSTERESIS;
-  let next = Math.max(roads.findIndex((at) => at >= from), 0);
-  let [high, low] = [pose(c, from)[1], pose(c, from)[1]];
+  let from = 0;
+  let earliest = 2 * HYSTERESIS;
+  let [high, low] = [ys[0], ys[0]];
+  let next = 0;
+  let first: number | undefined; // when the first drive sets off
   // Takes the road up to `to` into the drive being laid out.
   const reach = (to: number) => {
     for (; next < roads.length && roads[next] <= to; next++) [high, low] = [Math.min(high, ys[next]), Math.max(low, ys[next])];
   };
   const due = () => Math.max(earliest, low + top - 0.9 * view);
   const cut = (to: number, forward: number, hold?: number) => {
-    stretches.push({ from, to, forward, hold });
+    stretches.push({ from, to, forward, hold, speed: stretches.length ? undefined : FIRST });
     from = to;
     earliest = forward + HYSTERESIS;
     const y = pose(c, to)[1];
@@ -81,9 +82,8 @@ function layout(c: Course) {
   // drive has dropped down it.
   const holdOn = (leg: Leg) => {
     reach(leg.s);
-    const join = holds.length ? 0.85 : (c.join ?? 0.85);
-    const forward = Math.max(due(), leg.y + top - join * view);
-    const joins = Math.max(leg.y, forward - top + join * view);
+    const forward = !holds.length && first !== undefined ? first : Math.max(due(), leg.y + top - 0.85 * view);
+    const joins = Math.max(leg.y, forward - top + 0.85 * view);
     const leaves = Math.min(leg.y + leg.length, lastHold - top + screen);
     if (leaves - joins < 0.25 * view) return false;
     const at = leg.s + joins - leg.y;
@@ -110,22 +110,21 @@ function layout(c: Course) {
   };
 
   for (const leg of c.legs) {
-    if (leg.length <= 0 || leg.s + leg.length <= from + 0.01) continue;
-    if (from < c.lap[0] && leg.s >= c.lap[0] - 0.01) {
+    if (leg.length <= 0) continue;
+    if (first === undefined && leg.s >= c.lap[0] - 0.01) {
       reach(leg.s);
-      cut(leg.s, due());
+      first = due();
     }
     if (ridable(c, leg) && holdOn(leg)) continue;
-    fit(leg);
+    if (holds.length) fit(leg);
     reach(leg.s + leg.length);
   }
-  cut(c.length, due());
+  cut(c.length, !holds.length && first !== undefined ? first : due());
   return { stretches, holds };
 }
 
-// The trail's pieces: each leg, split where holds start and end. Pieces up
-// to `scrolled` (mixed mode) or along no stretch (glide mode) belong to no drive.
-export function split(legs: Leg[], stretches: { to: number }[], holds: Hold[], scrolled = 0) {
+// The trail's pieces: each leg, split where holds start and end.
+function split(legs: Leg[], stretches: Stretch[], holds: Hold[]) {
   const pieces: Piece[] = [];
   for (const leg of legs) {
     if (leg.length <= 0) continue;
@@ -136,7 +135,6 @@ export function split(legs: Leg[], stretches: { to: number }[], holds: Hold[], s
       const [a, b] = [cuts[k], cuts[k + 1]];
       const hold = holds.findIndex((h) => a >= h.from - 0.01 && b <= h.to + 0.01);
       if (hold >= 0) pieces.push({ leg: part(leg, a - leg.s, b - leg.s), hold });
-      else if (b <= scrolled + 0.01 || !stretches.length) pieces.push({ leg: part(leg, a - leg.s, b - leg.s) });
       else pieces.push({ leg: part(leg, a - leg.s, b - leg.s), drive: stretches.findIndex((d) => (a + b) / 2 < d.to) });
     }
   }
@@ -146,8 +144,10 @@ export function split(legs: Leg[], stretches: { to: number }[], holds: Hold[], s
 // Drive i's timing and keyframes: the bus along it, eased in and out, and
 // each piece of trail along it drawn up to the bus.
 function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
-  const duration = Math.round(Math.min(Math.max((d.to - d.from) / (c.speed ?? SPEED), 450), 2600));
-  const n = Math.max(2, Math.ceil(duration / 8));
+  const duration = Math.round(Math.min(Math.max((d.to - d.from) / (d.speed ?? SPEED), 450), 2600));
+  // Every 8ms, and every 4px of road on average, so it keeps round corners
+  // on the faster first drive too.
+  const n = Math.max(2, Math.ceil(duration / 8), Math.ceil((d.to - d.from) / 4));
   const [times, at, xs, ys, headings] = [[], [], [], [], []] as number[][];
   for (let k = 0; k <= n; k++) {
     const p = d.from + (d.to - d.from) * ease(k / n);
@@ -178,38 +178,7 @@ function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
 
 export function plan(c: Course): Plan {
   const { stretches, holds } = layout(c);
-  const pieces = split(c.legs, stretches, holds, c.scrolled?.to);
+  const pieces = split(c.legs, stretches, holds);
   const drives = stretches.map((d, i) => drive(c, d, i, pieces));
-  const poses = c.scrolled && { xs: c.xs, ys: c.ys, headings: c.headings };
-  return { kind: "drive", screen: AIM * c.view, view: c.view, drives, holds, pieces, scrolled: c.scrolled, poses };
-}
-
-// Mixed mode: the road up to the lap follows the scroll, the hero line as the
-// scroll timeline has it (to road and scroll `hero`), then on to where the
-// lap starts at an even pace, reaching it at scroll `end`, when the lap sets
-// off. The keyframes for the bus and the trail along it.
-export function approach(
-  c: { legs: Leg[]; roads: number[]; xs: number[]; ys: number[]; headings: number[]; scroll: number[] },
-  hero: [road: number, scroll: number],
-  lap: number,
-  end: number
-): Approach {
-  const [roads, scroll, xs, ys, headings] = [[], [], [], [], []] as number[][];
-  const add = (at: number, s: number) => {
-    const [x, y, heading] = pose(c, at);
-    roads.push(at);
-    scroll.push(s);
-    xs.push(x);
-    ys.push(y);
-    headings.push(heading);
-  };
-  c.roads.forEach((at, k) => {
-    if (at <= hero[0]) add(at, c.scroll[k]);
-    else if (at < lap) add(at, hero[1] + ((at - hero[0]) / (lap - hero[0])) * (end - hero[1]));
-  });
-  add(lap, end);
-  const legs = c.legs.filter((leg) => leg.length > 0 && leg.s + leg.length <= lap + 0.01);
-  const steps: Step[][] = reveals(legs, roads, scroll);
-  const trail = legs.map((leg, i): [number, Step[]] => [leg.s, steps[i]]);
-  return { to: lap, end, frames: keyframes(scroll, xs, ys, headings), trail, roads, scroll };
+  return { screen: AIM * c.view, view: c.view, drives, holds, pieces };
 }

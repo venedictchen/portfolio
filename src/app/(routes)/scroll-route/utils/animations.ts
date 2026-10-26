@@ -1,5 +1,5 @@
-import { FADE, FOLLOW, SLIDING, STICKY, VIEW } from "../constants";
-import type { Frame, Leg, Route, Step } from "../types";
+import { FADE, SLIDING, STICKY } from "../constants";
+import type { Frame, Leg, Route } from "../types";
 import { slides } from "./keyframes";
 
 // How a leg shows u px of itself, as [property, value]: a straight's bar
@@ -18,21 +18,6 @@ export function reveal(leg: Leg, u: number) {
 // leaving a leg drawn, or not, apart from the bus.
 export function animations(route: Route) {
   const end = route.scroll.at(-1)!;
-  // How each runs, for `to` px of scroll: on the page's scroll timeline; in
-  // view mode on the route's own view timeline, from where its top meets the
-  // top of the screen (so the screen's height, which the toolbars change,
-  // doesn't come into it), less the page's scroll padding, which the view
-  // timeline leaves out of the screen; in follow mode as a timed animation,
-  // 1ms a px, held still (see useRouteFollow).
-  const padding = VIEW ? Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0 : 0;
-  const timing = (name: string, to: number) => {
-    if (FOLLOW) return `animation:${name} ${to}ms linear both paused`;
-    if (VIEW) {
-      const start = padding - route.top;
-      return `animation:${name} auto linear both;animation-timeline:--route;animation-range:contain ${start}px contain ${start + to}px`;
-    }
-    return `animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px`;
-  };
   const rule = (name: string, selector: string, steps: [number, string][]) => {
     const whole: [number, string][] = [
       ...(steps[0][0] > 0 ? [[0, steps[0][1]] as [number, string]] : []),
@@ -43,12 +28,11 @@ export function animations(route: Route) {
     if (to <= 0) return "";
     // Fine enough to keep steps 0.01px of scroll apart on the longest page.
     const frames = whole.map(([at, value]) => `${((at / to) * 100).toFixed(6)}%{${value}}`);
-    return `@keyframes ${name}{${frames.join("")}}${selector}{${timing(name, to)}}`;
+    return `@keyframes ${name}{${frames.join("")}}${selector}{animation:${name} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`;
   };
   const drive = (frames: Frame[]) =>
     frames.map(([at, x, y, heading]): [number, string] => [at, `translate:${x}px ${y}px;rotate:${heading}deg`]);
-  let css = VIEW ? ".scroll-route{view-timeline:--route block}" : "";
-  css += rule("bus-page", '.scroll-bus[data-frame="page"]', drive(route.frames));
+  let css = rule("bus-page", '.scroll-bus[data-frame="page"]', drive(route.frames));
   if (STICKY) {
     css += rule("bus-screen", '.scroll-bus[data-frame="screen"]', drive(route.screen));
     // The sticky bus, drawn over the page one, fades in over FADE px of scroll
@@ -81,28 +65,4 @@ export function animations(route: Route) {
     return rule(`trail-${i}`, `[data-leg="${i}"]`, steps);
   });
   return css + legs.join("");
-}
-
-// Mixed mode: the road up to the lap on the page's scroll timeline, for the
-// driving bus (only while it's on it: the drives take over from its end)
-// and for the trail along it.
-export function heroRules(route: Route) {
-  const { end } = route.drive!.scrolled!;
-  const percent = (at: number, to: number) => `${((at / to) * 100).toFixed(6)}%`;
-  const { frames, trail } = route.drive!.scrolled!;
-  const bus = frames.map(([at, x, y, heading]) => `${percent(at, end)}{translate:${x}px ${y}px;rotate:${heading}deg}`).join("");
-  // Only while the bus is on it (data-approach, see useRouteDrive).
-  const on = ".scroll-route[data-approach]";
-  let css = `@keyframes hero-bus{${bus}}${on} .scroll-bus[data-frame="drive"]{animation:hero-bus auto linear none;animation-timeline:scroll(root);animation-range:0px ${end}px}`;
-  route.drive!.pieces.forEach((piece, j) => {
-    if (piece.drive !== undefined || piece.hold !== undefined) return;
-    const steps = trail.find(([s]) => s === piece.leg.s)?.[1];
-    if (!steps) return;
-    const to = steps.at(-1)![0];
-    // From 0%, held, so it never starts from whatever styles the piece has.
-    const whole: Step[] = steps[0][0] > 0 ? [[0, steps[0][1]], ...steps] : steps;
-    const keys = whole.map(([at, u]) => `${percent(at, to)}{${reveal(piece.leg, u).join(":")}}`).join("");
-    css += `@keyframes hero-trail-${j}{${keys}}${on} [data-leg="${j}"]{animation:hero-trail-${j} auto linear both;animation-timeline:scroll(root);animation-range:0px ${to}px}`;
-  });
-  return css;
 }
