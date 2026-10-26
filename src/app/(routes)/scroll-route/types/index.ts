@@ -13,9 +13,9 @@ export type Ride = "pin" | "slide";
 export type Pose = [x: number, y: number, heading: number];
 
 // Drive mode (see useRouteDrive). A stretch the bus drives by itself: its
-// road, the scroll that sets it off forwards and that sends it back (which,
-// into a hold, comes after: see useRouteDrive), how long it takes in ms, the hold it ends in, and keyframes for the bus and for each
-// piece of trail along it.
+// road, the scroll that sets it off forwards and that sends it back, how
+// long it takes in ms, the hold it ends in, and keyframes for the bus and
+// for each piece of trail along it.
 export type Drive = {
   from: number;
   to: number;

@@ -11,7 +11,7 @@ import { roadAt } from "../utils/road";
 export function useRouteProgress(ref: RefObject<HTMLElement | null>, route: Route | null) {
   useEffect(() => {
     const overlay = ref.current;
-    // Drive mode follows the scroll itself (see useRouteDrive).
+    // Drive mode does all this itself (see useRouteDrive).
     if (!route || !overlay || route.drive) return;
     const bus = overlay.querySelector<HTMLElement>('.scroll-bus[data-frame="page"]');
     const stickyBus = overlay.querySelector<HTMLElement>('.scroll-bus[data-frame="screen"]');

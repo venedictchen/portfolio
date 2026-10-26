@@ -183,7 +183,6 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       if (back <= forward) return y >= (holding ? back : forward);
       return y >= back || (y >= forward && (holding ? going >= 0 : going > 0));
     };
-    // How many drives the scroll asks for.
     const wanted = (y: number) => {
       let holding = done;
       if (active) holding = active.dir > 0 ? active.i + 1 : active.i;
