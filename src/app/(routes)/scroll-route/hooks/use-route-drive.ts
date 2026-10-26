@@ -35,6 +35,10 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     let through = -1; // the hold the held bus is sliding right through, if any
     let shown: HTMLElement | undefined;
     let frame = 0;
+    // Which way the scroll's going, once it has gone 24px that way: 1 down,
+    // -1 up (0 before it has gone anywhere), and how far it got.
+    let going = 0;
+    let pivot = window.scrollY;
 
     const show = (el: HTMLElement) => {
       if (el === shown) return;
@@ -126,7 +130,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
         return y - (k === undefined ? (drives[i + 1]?.forward ?? Infinity) : holds[k].start);
       }
       const k = before(i);
-      return (k === undefined ? (drives[i - 1]?.back ?? -Infinity) : holds[k].end) - y;
+      return (k === undefined ? (drives[i - 1]?.back ?? drives[i].forward) : holds[k].end) - y;
     };
     // The further behind, the faster it drives (up to 6 times), so the bus
     // catches up without ever jumping.
@@ -166,13 +170,25 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
       tick();
     }
 
-    // How many drives the scroll asks for: each from where it sets off, and
-    // still while the scroll stays short of where it turns back.
+    const head = (y: number) => {
+      if (going * (y - pivot) > 0) pivot = y;
+      else if (Math.abs(y - pivot) >= 24) [going, pivot] = [Math.sign(y - pivot), y];
+    };
+    // Whether the scroll asks for drive n: from where it sets off, and still
+    // while the scroll stays short of where it turns back. A drive into a
+    // hold turns back after where it set off, as soon as the bus leaves the
+    // hold: in between it goes whichever way the scroll's headed.
+    const asked = (n: number, holding: boolean, y: number) => {
+      const { forward, back } = drives[n];
+      if (back <= forward) return y >= (holding ? back : forward);
+      return y >= back || (y >= forward && (holding ? going >= 0 : going > 0));
+    };
+    // How many drives the scroll asks for.
     const wanted = (y: number) => {
       let holding = done;
       if (active) holding = active.dir > 0 ? active.i + 1 : active.i;
       let n = 0;
-      while (n < drives.length && (y >= drives[n].forward || (n < holding && y >= drives[n].back))) n++;
+      while (n < drives.length && asked(n, n < holding, y)) n++;
       return n;
     };
     // The bus's place along the road, for lighting stops.
@@ -213,6 +229,7 @@ export function useRouteDrive(ref: RefObject<HTMLElement | null>, route: Route |
     function tick(resting = false) {
       frame = 0;
       const y = window.scrollY;
+      head(y);
       steer(y);
       mark();
       light(road(y), resting);

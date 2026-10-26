@@ -143,7 +143,7 @@ function split(legs: Leg[], stretches: Stretch[], holds: Hold[]) {
 
 // Drive i's timing and keyframes: the bus along it, eased in and out, and
 // each piece of trail along it drawn up to the bus.
-function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
+function drive(c: Course, d: Stretch, i: number, pieces: Piece[], holds: Hold[]): Drive {
   const duration = Math.round(Math.min(Math.max((d.to - d.from) / (d.speed ?? SPEED), 450), 2600));
   // Every 8ms, and every 4px of road on average, so it keeps round corners
   // on the faster first drive too.
@@ -173,12 +173,15 @@ function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
     });
     return [[j, keys]];
   });
-  return { ...d, back: d.forward - HYSTERESIS, duration, start: pose(c, d.from), end: pose(c, d.to), bus, pieces: parts };
+  // It turns back where it set off, or, into a hold, as soon as the bus
+  // leaves the hold going back up: the way back mirrors the way there.
+  const turn = d.hold === undefined ? d.forward : Math.max(d.forward, holds[d.hold].start);
+  return { ...d, back: turn - HYSTERESIS, duration, start: pose(c, d.from), end: pose(c, d.to), bus, pieces: parts };
 }
 
 export function plan(c: Course): Plan {
   const { stretches, holds } = layout(c);
   const pieces = split(c.legs, stretches, holds);
-  const drives = stretches.map((d, i) => drive(c, d, i, pieces));
+  const drives = stretches.map((d, i) => drive(c, d, i, pieces, holds));
   return { screen: AIM * c.view, view: c.view, drives, holds, pieces };
 }
