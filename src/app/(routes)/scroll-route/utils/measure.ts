@@ -1,6 +1,6 @@
 import { AIM, BOTTOM, DRIVE, EASE, FRAME, HELD, MIXED, SLIDING, STEP, TOP, TURN } from "../constants";
 import type { Mode, Plan, Point, Route, Stop } from "../types";
-import { plan } from "./drive";
+import { approach, plan } from "./drive";
 import { glide } from "./glide";
 import { inFrame, keyframes, reveals, steadyLegs } from "./keyframes";
 import { trace } from "./road";
@@ -215,8 +215,15 @@ export function measure(overlay: HTMLElement, mode: Mode): Route | null {
   const course = { legs, roads, xs, ys, headings: turns, view, top: toPage };
   let drive: Plan | undefined;
   if (DRIVE) {
-    const scrolled = MIXED ? { to: legs[0].s + legs[0].length, end: trail[0].at(-1)![0] } : undefined;
-    drive = plan({ ...course, lap: [runs[3].s, runs[7].s], last, length, scrolled });
+    // Mixed mode follows the scroll up to the lap, reaching it once the whole
+    // photo is on screen, then laps it at once and drops onto its hold.
+    let scrolled;
+    if (MIXED) {
+      const hero: [number, number] = [legs[0].s + legs[0].length, trail[0].at(-1)![0]];
+      const ready = Math.max(photo.bottom + toPage - 0.9 * view, hero[1] + (runs[3].s - hero[0]) / 2);
+      scrolled = approach({ legs, roads, xs, ys, headings: turns, scroll }, hero, runs[3].s, ready);
+    }
+    drive = plan({ ...course, lap: [runs[3].s, runs[7].s], last, length, scrolled, join: MIXED ? AIM + 0.03 : undefined, speed: MIXED ? 1.6 : undefined });
   } else if (HELD) drive = glide({ ...course, steady, scroll });
 
   return {

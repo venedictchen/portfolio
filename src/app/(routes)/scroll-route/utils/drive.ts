@@ -1,7 +1,7 @@
 import { AIM } from "../constants";
-import type { Drive, Hold, Leg, Piece, Plan, Pose } from "../types";
+import type { Approach, Drive, Hold, Leg, Piece, Plan, Pose, Step } from "../types";
 import { reveal } from "./animations";
-import { simplify } from "./keyframes";
+import { keyframes, reveals, simplify } from "./keyframes";
 
 // Road px per ms the bus averages when it drives by itself.
 const SPEED = 1.1;
@@ -22,7 +22,9 @@ type Course = {
   top: number; // where the route starts on the page
   last: number; // the furthest the page is sure to scroll
   length: number;
-  scrolled?: { to: number; end: number }; // mixed mode: the road up to `to` follows the scroll until `end`
+  scrolled?: Approach; // mixed mode: the road up to `to` follows the scroll until `end`
+  join?: number; // share of the screen down which the bus joins the first hold, at its drive's start
+  speed?: number; // road px per ms the bus averages, if not SPEED
 };
 
 // The bus's place at road p.
@@ -79,8 +81,9 @@ function layout(c: Course) {
   // drive has dropped down it.
   const holdOn = (leg: Leg) => {
     reach(leg.s);
-    const forward = Math.max(due(), leg.y + top - 0.85 * view);
-    const joins = Math.max(leg.y, forward - top + 0.85 * view);
+    const join = holds.length ? 0.85 : (c.join ?? 0.85);
+    const forward = Math.max(due(), leg.y + top - join * view);
+    const joins = Math.max(leg.y, forward - top + join * view);
     const leaves = Math.min(leg.y + leg.length, lastHold - top + screen);
     if (leaves - joins < 0.25 * view) return false;
     const at = leg.s + joins - leg.y;
@@ -143,7 +146,7 @@ export function split(legs: Leg[], stretches: { to: number }[], holds: Hold[], s
 // Drive i's timing and keyframes: the bus along it, eased in and out, and
 // each piece of trail along it drawn up to the bus.
 function drive(c: Course, d: Stretch, i: number, pieces: Piece[]): Drive {
-  const duration = Math.round(Math.min(Math.max((d.to - d.from) / SPEED, 450), 2600));
+  const duration = Math.round(Math.min(Math.max((d.to - d.from) / (c.speed ?? SPEED), 450), 2600));
   const n = Math.max(2, Math.ceil(duration / 8));
   const [times, at, xs, ys, headings] = [[], [], [], [], []] as number[][];
   for (let k = 0; k <= n; k++) {
@@ -177,5 +180,36 @@ export function plan(c: Course): Plan {
   const { stretches, holds } = layout(c);
   const pieces = split(c.legs, stretches, holds, c.scrolled?.to);
   const drives = stretches.map((d, i) => drive(c, d, i, pieces));
-  return { kind: "drive", screen: AIM * c.view, view: c.view, drives, holds, pieces, scrolled: c.scrolled };
+  const poses = c.scrolled && { xs: c.xs, ys: c.ys, headings: c.headings };
+  return { kind: "drive", screen: AIM * c.view, view: c.view, drives, holds, pieces, scrolled: c.scrolled, poses };
+}
+
+// Mixed mode: the road up to the lap follows the scroll, the hero line as the
+// scroll timeline has it (to road and scroll `hero`), then on to where the
+// lap starts at an even pace, reaching it at scroll `end`, when the lap sets
+// off. The keyframes for the bus and the trail along it.
+export function approach(
+  c: { legs: Leg[]; roads: number[]; xs: number[]; ys: number[]; headings: number[]; scroll: number[] },
+  hero: [road: number, scroll: number],
+  lap: number,
+  end: number
+): Approach {
+  const [roads, scroll, xs, ys, headings] = [[], [], [], [], []] as number[][];
+  const add = (at: number, s: number) => {
+    const [x, y, heading] = pose(c, at);
+    roads.push(at);
+    scroll.push(s);
+    xs.push(x);
+    ys.push(y);
+    headings.push(heading);
+  };
+  c.roads.forEach((at, k) => {
+    if (at <= hero[0]) add(at, c.scroll[k]);
+    else if (at < lap) add(at, hero[1] + ((at - hero[0]) / (lap - hero[0])) * (end - hero[1]));
+  });
+  add(lap, end);
+  const legs = c.legs.filter((leg) => leg.length > 0 && leg.s + leg.length <= lap + 0.01);
+  const steps: Step[][] = reveals(legs, roads, scroll);
+  const trail = legs.map((leg, i): [number, Step[]] => [leg.s, steps[i]]);
+  return { to: lap, end, frames: keyframes(scroll, xs, ys, headings), trail, roads, scroll };
 }

@@ -35,6 +35,10 @@ export type Hold = { from: number; to: number; top: number; bottom: number; star
 // A piece of trail: all or part of a leg, along a drive or a hold (or
 // neither, following the scroll in mixed mode or glide mode).
 export type Piece = { leg: Leg; drive?: number; hold?: number };
+// Mixed mode: the road up to `to` follows the scroll until scroll `end`, with
+// keyframes for the bus and, by where each leg starts, for the trail, and the
+// road at each scroll (`roads`, `scroll`).
+export type Approach = { to: number; end: number; frames: Frame[]; trail: [s: number, steps: Step[]][]; roads: number[]; scroll: number[] };
 // Drive mode's plan (glide mode's has no drives, and the bus's place along
 // the road to glide by). In mixed mode the road follows the scroll up to
 // `scrolled.to`, until scroll `scrolled.end`.
@@ -45,7 +49,7 @@ export type Plan = {
   drives: Drive[];
   holds: Hold[];
   pieces: Piece[];
-  scrolled?: { to: number; end: number };
+  scrolled?: Approach;
   poses?: { xs: number[]; ys: number[]; headings: number[] };
 };
 
