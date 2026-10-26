@@ -16,7 +16,8 @@ export const VIEW = PICK === "view";
 // To try on iPhone: drive mode, but the hero line follows the scroll.
 export const MIXED = PICK === "mixed";
 // To try on iPhone: held along the long straights as in drive mode, and
-// elsewhere it glides after the scroll in short timed steps (see useRouteGlide).
+// elsewhere it glides smoothly after the scroll in timed animations (see
+// useRouteGlide).
 export const GLIDE = PICK === "glide";
 // From the scroll handler, the bus shows a frame from a scroll position or
 // two back; on iOS even scroll timelines are drawn a little apart from the

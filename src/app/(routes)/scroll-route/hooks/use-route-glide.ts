@@ -1,24 +1,34 @@
 import { useEffect, type RefObject } from "react";
-import type { Hold, Route } from "../types";
+import type { Leg, Route } from "../types";
 import { reveal } from "../utils/animations";
 import { pose } from "../utils/drive";
 import { roadAt } from "../utils/road";
 
-// ms a glide step takes while the scroll keeps moving: about how far behind
-// it the bus runs.
-const STEP = 60;
-// The fastest the bus glides, in road px per ms.
-const FASTEST = 5;
+// The bus follows the scroll smoothed in two stages, each LAG ms behind the
+// one before: critically damped, so it eases along with its speed changing
+// smoothly and never runs past where the scroll has got to.
+const LAG = 35;
+// Each glide is planned ahead on a forecast of the scroll, its speed dying
+// away over TAU ms, and planned again once the scroll strays TOL px from it
+// (at most every GAP ms), or at once if the forecast runs AHEAD px past it.
+const TAU = 250;
+const TOL = 5;
+const GAP = 100;
+const AHEAD = 1;
+// ms of scroll its speed is measured over
+const WINDOW = 70;
 
-type Glide = { to: number; end: number; animations: Animation[] };
+// A glide: from `start`, on the forecast from scroll y at speed v, the two
+// stages a ms at a time, and the road it ends at.
+type Glide = { start: number; y: number; v: number; s1: number[]; s2: number[]; to: number; animations: Animation[] };
+type Free = { leg: Leg; el: HTMLElement; hold?: number };
 
 // Glide mode (?route=glide): held still on screen along the long straights
 // as in drive mode, natively; everywhere else the bus glides after the
-// scroll's place along the road in short timed steps, each an ordinary
-// timed animation that starts exactly where and when the one before ends.
-// Nothing is changed while a step runs, so WebKit only ever plays plain
-// timed animations; once the scroll stops, a last, eased step glides the bus
-// to where it would be.
+// scroll in timed animations planned ahead, each taking over from the one
+// before at the same place and speed. Nothing is changed while one runs, so
+// WebKit only ever plays plain timed animations. Once the bus comes to rest
+// on a straight, it swaps for the held bus, in the same place.
 export function useRouteGlide(ref: RefObject<HTMLElement | null>, route: Route | null) {
   useEffect(() => {
     const overlay = ref.current;
@@ -28,27 +38,32 @@ export function useRouteGlide(ref: RefObject<HTMLElement | null>, route: Route |
     const { holds, pieces } = plan;
     const course = { roads: route.roads, ...plan.poses };
     const held = holds.map((_, k) => overlay.querySelector<HTMLElement>(`[data-hold="${k}"]`)!);
-    const trail = new Map(Array.from(overlay.querySelectorAll<HTMLElement>("[data-leg]"), (el) => [Number(el.dataset.leg), el]));
-    const along = holds.map((_, k) => pieces.findIndex((piece) => piece.hold === k));
-    const slides = along.map((j) => trail.get(j)!);
-    const clips = slides.map((slide) => slide.closest<HTMLElement>(".trail-clip")!);
-    const past = holds.map((_, k) => overlay.querySelector<HTMLElement>(`[data-leg="past-${k}"]`)!);
-    const free = pieces.flatMap((piece, j) => (piece.hold === undefined ? [j] : []));
+    const trail = new Map(Array.from(overlay.querySelectorAll<HTMLElement>("[data-leg]"), (el) => [el.dataset.leg!, el]));
+    const clips = holds.map((_, k) => trail.get(String(pieces.findIndex((piece) => piece.hold === k)))!.closest<HTMLElement>(".trail-clip")!);
+    // The trail on the page: the pieces between the holds, and a plain copy
+    // of each hold's piece, drawn while the bus isn't held along it.
+    const free: Free[] = pieces.flatMap((piece, j): Free[] => {
+      if (piece.hold === undefined) return [{ leg: piece.leg, el: trail.get(String(j))! }];
+      return [{ leg: piece.leg, el: trail.get(`past-${piece.hold}`)!, hold: piece.hold }];
+    });
     const years = document.querySelectorAll(".route-pin");
     const pins = overlay.querySelectorAll(".scroll-stop");
     const jobs = document.querySelectorAll("#experience ol > li");
     const stops = [...route.jobs, ...route.stops];
+    const [first, last] = [route.scroll[0], route.scroll.at(-1)!];
+    const within = (y: number) => Math.min(Math.max(y, first), last);
+    const forecast = (y: number, v: number, d: number) => within(y + v * TAU * (1 - Math.exp(-d / TAU)));
+    const k = 1 - Math.exp(-1 / LAG);
 
-    let p = 0; // where along the road the bus is once the steps planned end
+    let [s1, s2] = [within(window.scrollY), within(window.scrollY)]; // the two stages, while at rest
+    let glide: Glide | null = null;
+    let planned = -Infinity;
     let here = -1; // the hold it's held along, if any
-    const glides: Glide[] = []; // the step running and the one after it
-    let sliding: Animation[] = [];
-    let through = -1;
     let shown: HTMLElement | undefined;
     let frame = 0;
-    let [lastY, moved] = [window.scrollY, 0];
-    const drawn: string[] = [];
-    const marked: string[] = [];
+    let moved = -Infinity;
+    const samples: [number, number][] = [];
+    const drawn = new Map<HTMLElement, string>();
 
     const show = (el: HTMLElement) => {
       if (el === shown) return;
@@ -56,105 +71,101 @@ export function useRouteGlide(ref: RefObject<HTMLElement | null>, route: Route |
       el.dataset.show = "";
       shown = el;
     };
+    const paint = (el: HTMLElement, leg: Leg, u: number) => {
+      const [property, value] = reveal(leg, u);
+      if (drawn.get(el) === value) return;
+      drawn.set(el, value);
+      el.style.setProperty(property, value);
+    };
     // The bus and the trail as styles, at road `at`.
     const rest = (at: number) => {
       const [x, y, heading] = pose(course, at);
       bus.style.translate = `${x}px ${y}px`;
       bus.style.rotate = `${heading}deg`;
-      for (const j of free) {
-        const { leg } = pieces[j];
-        const [property, value] = reveal(leg, Math.min(Math.max(at - leg.s, 0), leg.length));
-        if (drawn[j] === value) continue;
-        drawn[j] = value;
-        trail.get(j)?.style.setProperty(property, value);
-      }
+      for (const { leg, el, hold } of free) if (hold !== here) paint(el, leg, Math.min(Math.max(at - leg.s, 0), leg.length));
     };
-    const mark = () => {
-      holds.forEach((hold, k) => {
-        let state = "none";
-        if (k === through) state = "through";
-        else if (k === here) state = "on";
-        else if (hold.to <= p + 0.5) state = "past";
-        if (marked[k] === state) return;
-        marked[k] = state;
-        clips[k].toggleAttribute("data-on", state === "on");
-        if (state === "through") return;
-        const { leg } = pieces[along[k]];
-        past[k].style.setProperty(...(reveal(leg, state === "past" ? leg.length : 0) as [string, string]));
+    // Along the hold it's held on, the trail rides with the held bus.
+    const mark = () =>
+      holds.forEach((_, j) => {
+        clips[j].toggleAttribute("data-on", j === here);
+        const copy = free.find((piece) => piece.hold === j)!;
+        if (j === here) paint(copy.el, copy.leg, 0);
       });
+    // The two stages at `now` along a glide.
+    const state = (g: Glide, now: number) => {
+      const d = Math.min(Math.max(now - g.start, 0), g.s2.length - 1);
+      const i = Math.floor(d);
+      const j = Math.min(i + 1, g.s2.length - 1);
+      const f = d - i;
+      return [g.s1[i] + f * (g.s1[j] - g.s1[i]), g.s2[i] + f * (g.s2[j] - g.s2[i])];
     };
-    // As in drive mode: shows the bus held along hold k, sliding it there
-    // from the end of the hold the gliding bus has reached if the scroll has
-    // moved on.
-    const join = (k: number, from: "top" | "bottom") => {
-      const hold = holds[k];
-      const screen = hold.screen ?? 0;
-      const y = window.scrollY;
-      const at = hold[from] + route.top - y;
-      let there = screen;
-      if (y <= hold.start) there = hold.top + route.top - y;
-      else if (y >= hold.end) there = hold.bottom + route.top - y;
-      const off = at - there;
-      here = k;
-      show(held[k]);
-      if (Math.abs(off) < 0.5) return;
-      const timing = { duration: Math.min(200 + Math.abs(off) * 0.6, 700), easing: "ease-out" };
-      const move = held[k].animate([{ translate: `${hold.x}px ${off}px` }, { translate: `${hold.x}px 0px` }], timing);
-      if (from === "top" ? y >= hold.end : y <= hold.start) {
-        through = k;
-        const { leg } = pieces[along[k]];
-        const ends = [reveal(leg, 0), reveal(leg, leg.length)];
-        if (from === "bottom") ends.reverse();
-        sliding = [move, past[k].animate(ends.map(([property, value]) => ({ [property]: value })), timing)];
-      } else sliding = [move, slides[k].animate([{ translate: `0 ${screen + off}px` }, { translate: `0 ${screen}px` }], timing)];
-      sliding[0].onfinish = () => {
-        sliding = [];
-        through = -1;
-        tick();
-      };
+    const stop = (now: number) => {
+      if (!glide) return;
+      [s1, s2] = state(glide, now);
+      rest(roadAt(route, s2));
+      glide.animations.forEach((animation) => animation.cancel());
+      glide = null;
     };
 
-    // Where the scroll would have the bus, short of the holds either side.
-    const aim = (y: number): [number, Hold | undefined] => {
-      const target = roadAt(route, y);
-      const ahead = holds.find((hold) => hold.from >= p - 0.5);
-      if (ahead && target >= ahead.from) return [ahead.from, ahead];
-      const behind = holds.findLast((hold) => hold.to <= p + 0.5);
-      if (behind && target <= behind.to) return [behind.to, behind];
-      return [target, undefined];
-    };
-    // A step from p toward `to`, starting at `start`: quick and even while
-    // the scroll moves, eased out once it has stopped.
-    const step = (to: number, start: number, moving: boolean) => {
-      const duration = moving ? STEP : Math.min(Math.max(160 + Math.abs(to - p) * 0.4, 160), 450);
-      const d = Math.min(Math.max(to - p, -FASTEST * duration), FASTEST * duration);
-      const n = Math.max(2, Math.ceil(Math.abs(d) / 6));
-      const at = Array.from({ length: n + 1 }, (_, k) => p + (d * k) / n);
-      const timing: KeyframeAnimationOptions = { duration, easing: moving ? "linear" : "ease-out", fill: "forwards" };
+    // From where the bus is at `now`, its glide on the forecast from scroll
+    // y at speed v until it comes to rest: keyframes every 8ms, or 6px of
+    // road, for the bus and each piece of trail it passes.
+    const start = (now: number, y: number, v: number) => {
+      if (glide) [s1, s2] = state(glide, now);
+      const a1 = [s1];
+      const a2 = [s2];
+      let [x1, x2] = [s1, s2];
+      for (let d = 1; d < 4000; d++) {
+        const to = forecast(y, v, d);
+        x1 += (to - x1) * k;
+        x2 += (x1 - x2) * k;
+        a1.push(x1);
+        a2.push(x2);
+        if (Math.abs(x1 - to) < 0.02 && Math.abs(x2 - to) < 0.02 && Math.abs(forecast(y, v, d + 1) - to) < 0.001) break;
+      }
+      const road = a2.map((s) => roadAt(route, s));
+      const duration = road.length - 1;
+      stop(now);
+      [s1, s2] = [a1.at(-1)!, a2.at(-1)!];
+      planned = now;
+      if (duration < 1) return rest(road[0]);
+      const times = [0];
+      for (let d = 1; d <= duration; d++) if (d === duration || d - times.at(-1)! >= 8 || Math.abs(road[d] - road[times.at(-1)!]) >= 6) times.push(d);
+      const timing: KeyframeAnimationOptions = { duration, fill: "forwards" };
       const animations = [
         bus.animate(
-          at.map((q, k) => {
-            const [x, y, heading] = pose(course, q);
-            return { offset: k / n, translate: `${x}px ${y}px`, rotate: `${heading}deg` };
+          times.map((d) => {
+            const [x, y, heading] = pose(course, road[d]);
+            return { offset: d / duration, translate: `${x}px ${y}px`, rotate: `${heading}deg` };
           }),
           timing
         ),
       ];
-      const [lo, hi] = [Math.min(p, p + d), Math.max(p, p + d)];
-      for (const j of free) {
-        const { leg } = pieces[j];
+      const [lo, hi] = [Math.min(...road), Math.max(...road)];
+      for (const { leg, el } of free) {
         if (leg.s + leg.length <= lo || leg.s >= hi) continue;
-        const keys = at.map((q, k) => {
-          const [property, value] = reveal(leg, Math.min(Math.max(q - leg.s, 0), leg.length));
-          return { offset: k / n, [property]: value };
+        const keys = times.map((d) => {
+          const [property, value] = reveal(leg, Math.min(Math.max(road[d] - leg.s, 0), leg.length));
+          return { offset: d / duration, [property]: value };
         });
-        animations.push(trail.get(j)!.animate(keys, timing));
+        animations.push(el.animate(keys, timing));
       }
-      for (const animation of animations) animation.startTime = start;
-      p += d;
-      glides.push({ to: p, end: start + duration, animations });
+      for (const animation of animations) animation.startTime = now;
+      glide = { start: now, y, v, s1: a1, s2: a2, to: road.at(-1)!, animations };
     };
 
+    // The scroll's speed: the slope through its last WINDOW ms.
+    const speed = () => {
+      if (samples.length < 2) return 0;
+      const n = samples.length;
+      const [mt, my] = samples.reduce(([a, b], [t, y]) => [a + t / n, b + y / n], [0, 0]);
+      let [num, den] = [0, 0];
+      for (const [t, y] of samples) {
+        num += (t - mt) * (y - my);
+        den += (t - mt) ** 2;
+      }
+      return den ? num / den : 0;
+    };
     const light = (at: number, resting: boolean) => {
       route.years.forEach((year, i) => years[i]?.toggleAttribute("data-lit", at >= year));
       stops.forEach((stop, i) => pins[i]?.toggleAttribute("data-lit", at >= stop.at));
@@ -163,53 +174,53 @@ export function useRouteGlide(ref: RefObject<HTMLElement | null>, route: Route |
       if (arrived || (resting && overlay.dataset.arrived !== undefined)) overlay.toggleAttribute("data-arrived", arrived);
       overlay.toggleAttribute("data-left", !arrived && overlay.dataset.arrived !== undefined);
     };
-    // Leaves the hold once the scroll does, where the held bus has stopped.
-    const leave = (y: number) => {
-      const hold = holds[here];
-      if (sliding.length || (y >= hold.start - 1 && y <= hold.end + 1)) return;
-      p = y < hold.start ? hold.from : hold.to;
-      here = -1;
-      rest(p);
-      show(bus);
+    // Held along hold j, where the gliding bus has come to rest.
+    const join = (j: number) => {
+      here = j;
+      show(held[j]);
     };
-    // The next step, once the one running is all but done.
-    const next = (y: number, now: number, moving: boolean) => {
-      const last = glides.at(-1);
-      if (sliding.length || glides.length > 1 || (last && last.end - now > 20)) return;
-      const [to, hold] = aim(y);
-      if (Math.abs(to - p) > 0.3) step(to, last ? last.end : now, moving);
-      else if (!last && hold) join(holds.indexOf(hold), hold.from === to ? "top" : "bottom");
+    // Off the hold once the scroll leaves it, gliding on from its end at the
+    // scroll's speed, as the held bus went.
+    const leave = (now: number, y: number, v: number) => {
+      const hold = holds[here];
+      if (y >= hold.start - 1 && y <= hold.end + 1) return;
+      s2 = y < hold.start ? hold.start : hold.end;
+      s1 = s2 + v * LAG;
+      here = -1;
+      rest(roadAt(route, s2));
+      show(bus);
+      start(now, y, v);
     };
 
-    function tick(resting = false) {
+    const tick = (resting = false) => {
       frame = 0;
       const now = Number(document.timeline.currentTime ?? performance.now());
-      const y = window.scrollY;
-      if (y !== lastY) [lastY, moved] = [y, now];
-      while (glides.length && now >= glides[0].end) {
-        // Its end as styles (under the next step, if one runs) before it goes.
-        const done = glides.shift()!;
-        rest(done.to);
-        done.animations.forEach((animation) => animation.cancel());
+      const y = within(window.scrollY);
+      if (samples.length && y !== samples.at(-1)![1]) moved = now;
+      if (!samples.length || now > samples.at(-1)![0]) samples.push([now, y]);
+      while (samples[0][0] < now - WINDOW) samples.shift();
+      const v = speed();
+      if (here >= 0) leave(now, y, v);
+      else if (glide) {
+        const err = y - forecast(glide.y, glide.v, now - glide.start);
+        const ahead = err * Math.sign(glide.v || err) < 0;
+        if ((Math.abs(err) > TOL && now - planned >= GAP) || (ahead && Math.abs(err) > AHEAD)) start(now, y, v);
+        else if (now >= glide.start + glide.s2.length - 1) stop(now);
+      } else if (Math.abs(y - s2) > 0.05) start(now, y, v);
+      if (here < 0 && !glide) {
+        const j = holds.findIndex((hold) => y >= hold.start && y <= hold.end);
+        if (j >= 0 && Math.abs(roadAt(route, s2) - roadAt(route, y)) < 0.5) join(j);
       }
-      if (here >= 0) leave(y);
-      if (here < 0) next(y, now, now - moved < 80);
       mark();
-      if (here >= 0) light(holds[here].from + Math.min(Math.max(y - holds[here].start, 0), holds[here].to - holds[here].from), resting);
-      else light(p, resting);
-      if ((glides.length || sliding.length || now - moved < 200) && !frame) frame = requestAnimationFrame(() => tick());
-    }
+      const hold = holds[here];
+      if (hold) light(hold.from + Math.min(Math.max(y - hold.start, 0), hold.to - hold.from), resting);
+      else light(roadAt(route, glide ? state(glide, now)[1] : s2), resting);
+      if ((glide || now - moved < 200) && !frame) frame = requestAnimationFrame(() => tick());
+    };
 
     // Where the scroll is, without gliding there.
-    const y0 = window.scrollY;
-    p = roadAt(route, y0);
-    rest(p);
-    const k0 = holds.findIndex((hold) => y0 >= hold.start && y0 <= hold.end);
-    if (k0 >= 0) {
-      here = k0;
-      show(held[k0]);
-    } else show(bus);
-
+    rest(roadAt(route, s2));
+    show(bus);
     let rest0 = 0;
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(() => tick());
@@ -222,8 +233,7 @@ export function useRouteGlide(ref: RefObject<HTMLElement | null>, route: Route |
     return () => {
       cancelAnimationFrame(frame);
       clearTimeout(rest0);
-      glides.forEach((glide) => glide.animations.forEach((animation) => animation.cancel()));
-      sliding.forEach((animation) => animation.cancel());
+      glide?.animations.forEach((animation) => animation.cancel());
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("scrollend", onScroll);
     };
