@@ -1,9 +1,9 @@
-import HeroSection from "./_sections/hero";
-import AboutSection from "./_sections/about";
-import ExperienceSection from "./_sections/experience";
-import ProjectsSection from "./_sections/projects";
-import WritingSection from "./_sections/writing";
-import ContactSection from "./_sections/contact";
+import HeroSection from "./sections/hero";
+import AboutSection from "./sections/about";
+import ExperienceSection from "./sections/experience";
+import ProjectsSection from "./sections/projects";
+import WritingSection from "./sections/writing";
+import ContactSection from "./sections/contact";
 import ScrollRoute from "./scroll-route";
 
 export default function Home() {
